@@ -14,4 +14,27 @@
 7. [Licencia](#licencia)
 ---
 
-##Descripción del proyecto
+## Descripción del proyecto
+
+---
+
+## Funcionalidades
+
+---
+
+## Acceso al Proyecto
+
+---
+
+## Tecnologías Utilizadas
+
+---
+
+## Personas Contribuyentes
+
+---
+
+## Personas Desarrolladoras del Proyecto
+
+---
+
