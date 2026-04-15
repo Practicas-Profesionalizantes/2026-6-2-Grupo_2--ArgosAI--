@@ -67,7 +67,7 @@ CREATE TABLE actividad(
 	fechaYHoraFin datetime,
 	nivelConfianza float, /* No se si esto iría acá. Yo lo sacaría pero por ahora lo dejo. */
 	empleado_id int,
-	camara_id int,
+	camara_id int, /* Camara id no debería ir en highlights?? */
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
 	FOREIGN KEY (camara_id) REFERENCES camara(id)
 );
@@ -85,11 +85,11 @@ CREATE TABLE alerta(
 	fechaYHora datetime,
 	nivelConfianza float, /* Lo mismo que en Actividad, no se si iría esto acá */
 	empleado_id int,
-	camara_id int,
+	camara_id int, /* Camara id no debería ir en highlights?? */
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
 	FOREIGN KEY (camara_id)	REFERENCES camara(id)
 );
-CREATE TABLE highlights(
+CREATE TABLE highlights( /* No habría que extraer un nuevo video para el highlight??? si no puede ser poner el fragmento(de que minuto a que minuto del video dura)*/
 	id int primary key,
 	video_id int,
 	actividad_id int,
@@ -112,7 +112,7 @@ CREATE TABLE mov_sospechoso(
 	descripcionPersonaInvolucrada varchar(500),
 	nivelConfianza float, /* Lo mismo que en Actividad y Alerta, no se si iría esto acá */
 	boundingBox varchar(500), /* No se que es esto, por lo que tampoco se cuantos caracteres tope ponerle */
-	highlight_id int,
+	highlight_id int, /* Highlight es para las actividades, no tendría que tener su propio video o en todo caso foreign key de video?? */
 	FOREIGN KEY (highlight_id) REFERENCES highlights(id)
 );
 
@@ -319,7 +319,6 @@ CREATE PROCEDURE mte(IN id_empleado, OUT mensaje varchar(50)) /* Mostrar Turnos 
  
  /*
  CREATE PROCEDURE mtrh(IN hora1 time, hora2 time, OUT mensaje varchar(50)) /* Mostrar Turnos en un Rango de Horas */
- /*
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -413,7 +412,7 @@ CREATE PROCEDURE gal(IN gradoN varchar(50), IN incumplimientoN varchar(100), IN 
 	SET mensaje = 'Alerta guardada con éxito.'
  END //
  
-CREATE PROCEDURE bal(IN id_alerta, OUT mensaje varchar(50)) /* Borrar Alerta */
+CREATE PROCEDURE bal(IN id_alerta int , OUT mensaje varchar(50)) /* Borrar Alerta */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -424,5 +423,87 @@ CREATE PROCEDURE bal(IN id_alerta, OUT mensaje varchar(50)) /* Borrar Alerta */
 		DELETE FROM alerta WHERE id = id_alerta;
 	COMMIT;
 	SET mensaje = 'Alerta guardada con éxito.'
+ END //
+
+CREATE PROCEDURE gh(IN id_video int, id_actividad int, OUT mensaje varchar(50)) /* Guardar Highlight */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		INSERT INTO highlights(video_id, actividad_id)
+		VALUES(id_video, id_actividad);
+	COMMIT;
+	SET mensaje = 'Highlight guardado con éxito.'
+ END //
+
+CREATE PROCEDURE bh(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highlight */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		DELETE FROM highlights WHERE id = id_highlight;
+	COMMIT;
+	SET mensaje = 'Highlight guardado con éxito.'
+ END //
+
+CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200), IN fechaYHoraRevision datetime, IN id_usuario int, IN id_alerta int, OUT mensaje varchar(50)) /* Crear una Revisión de Alerta */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		INSERT INTO revision_alerta(estadoRevision, comentarios, fechaYHoraRevision, usuario_id, alerta_id)
+		VALUES(estadoRevisionN, comentariosN, fechaYHoraRevisionN, id_usuario, id_alerta)
+	COMMIT;
+	SET mensaje = 'Revisión de alerta creada con éxito.'
+ END //
+
+CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT mensaje varchar(50)) /* Modificar el Estado de una Revisión de Alerta */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		UPDATE revision_alerta
+		SET estadoRevision = estadoRevisionN
+	COMMIT;
+	SET mensaje = 'Estado de la revisión modificado con éxito.'
+ END //		
+
+CREATE PROCEDURE gms(IN fechaYHoraN datetime, IN descripcionPersonaInvolucradaN varchar(500), IN nivelConfianzaN float, IN, boundingBoxN varchar(500), id_highlight int, OUT mensaje varchar(50)) /* Guardar un movimiento sospechoso */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		INSERT INTO mov_sospechoso(fechaYHora, descripcionPersonaInvolucrada, nivelConfianza, boundingBox, highlight_id)
+		VALUES(fechaYHoraN, descripcionPersonaInvolucradaN, nivelConfianzaN, boundingBoxN, id_highlight);
+	COMMIT;
+	SET mensaje = 'Movimiento sospechoso registrado con éxito.'
+ END //		
+
+CREATE PROCEDURE bms(IN id_movimiento, OUT mensaje varchar(50)) /* Borrar un movimiento sospechoso */
+ BEGIN
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+	 BEGIN
+	  ROLLBACK;
+	  SET mensaje = 'Ocurrio un error.';
+	 END;
+	START TRANSACTION;
+		DELETE FROM mov_sospechoso WHERE id = id_movimiento;
+	COMMIT;
+	SET mensaje = 'Movimiento sospechoso registrado con éxito.'
  END //
  DELIMITER ;
