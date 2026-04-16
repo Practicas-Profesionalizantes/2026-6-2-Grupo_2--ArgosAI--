@@ -7,7 +7,7 @@ CREATE TABLE usuario(
 	nombre varchar(50),
 	email varchar(50),
 	contrasenia varchar(50),
-	telefono varchar(50) /* No se si sería mejor en int */
+	telefono varchar(50)  /* Contar la cantidad de dígitos */
 );
 CREATE TABLE camara(
 	id int primary key,
@@ -21,7 +21,7 @@ CREATE TABLE video(
 	fecha date,
 	duracion time,
 	tamanoArchivo float,
-	estadoProcesamiento varchar(50), /* No se si esto son los dias que quedan antes que se borre solo o es otra cosa. Si es otra cosa falta lo que dije.*/
+	estadoProcesamiento varchar(50), /* Tiempo límite*/
 	camara_id int,
 	foreign key (camara_id) REFERENCES camara(id) 
 );
@@ -36,11 +36,11 @@ CREATE TABLE empleado(
 	genero varchar(50),
 	rendimiento float,
 	estado varchar(50),
-	vectorFacial varchar(1000), /* No se como son los datos así que le puse 1000 de caracteres por las dudas */
+	vectorFacial varchar(1000), /* No se como son los datos así que le puse 1000 de caracteres por las dudas */ /* averiguar cuanta cantidad */ /* Se puede cambiar por url de la imagen de la persona para que la IA no se reentrene al cambio de cada empleado */
 	rol_id int,
 	FOREIGN KEY (rol_id) REFERENCES rol_empleado(id)
 );
-CREATE TABLE turno( /* Pienso que debería cambiar el fechayhorainicio y fechayhorafin por simplemente la hora y el inicio, sin poner una fecha y poner un atributo mas para ver los días que trabaja */
+CREATE TABLE turno( /* Pienso que debería cambiar el fechayhorainicio y fechayhorafin por simplemente la hora y el inicio, sin poner una fecha y poner un atributo mas para ver los días que trabaja */ /* Posibilidad de crear otra tabla para los días que trabaja */
 	id int primary key,
 	fechaYHoraInicio datetime,
 	fechaYHoraFin datetime,
@@ -71,6 +71,7 @@ CREATE TABLE actividad(
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
 	FOREIGN KEY (camara_id) REFERENCES camara(id)
 );
+/* Tabla muchos a muchos relacionamiento entre actividad y métrica */
 CREATE TABLE metrica(
 	id int primary key,
 	tipo varchar(50),
@@ -89,8 +90,9 @@ CREATE TABLE alerta(
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
 	FOREIGN KEY (camara_id)	REFERENCES camara(id)
 );
-CREATE TABLE highlights( /* No habría que extraer un nuevo video para el highlight??? si no puede ser poner el fragmento(de que minuto a que minuto del video dura)*/
+CREATE TABLE highlights( /* No habría que extraer un nuevo video para el highlight??? si no puede ser poner el fragmento(de que minuto a que minuto del video dura)*/ 
 	id int primary key,
+	/* añadir marca de tiempo del highlight */
 	video_id int,
 	actividad_id int,
 	FOREIGN KEY (video_id) REFERENCES video(id),
@@ -111,8 +113,9 @@ CREATE TABLE mov_sospechoso(
 	fechaYHora datetime,
 	descripcionPersonaInvolucrada varchar(500),
 	nivelConfianza float, /* Lo mismo que en Actividad y Alerta, no se si iría esto acá */
-	boundingBox varchar(500), /* No se que es esto, por lo que tampoco se cuantos caracteres tope ponerle */
-	highlight_id int, /* Highlight es para las actividades, no tendría que tener su propio video o en todo caso foreign key de video?? */
+	boundingBox varchar(500), /* El cuadro con el que la IA detecta el movimiento. */
+	highlight_id int, /* Highlight es para las actividades, no tendría que tener su propio video o en todo caso foreign key de video?? */ 
+	/* Añadir marca de tiempo, borrar highlight id y meter id del video */ 
 	FOREIGN KEY (highlight_id) REFERENCES highlights(id)
 );
 
