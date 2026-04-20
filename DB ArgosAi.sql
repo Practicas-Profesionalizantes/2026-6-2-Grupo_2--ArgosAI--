@@ -7,7 +7,7 @@ CREATE TABLE usuario(
 	nombre varchar(50),
 	email varchar(50),
 	contrasenia varchar(50),
-	telefono varchar(50)  /* Contar la cantidad de dígitos */
+	telefono varchar(17)
 );
 CREATE TABLE camara(
 	id int primary key,
@@ -36,16 +36,28 @@ CREATE TABLE empleado(
 	genero varchar(50),
 	rendimiento float,
 	estado varchar(50),
-	vectorFacial varchar(1000), /* No se como son los datos así que le puse 1000 de caracteres por las dudas */ /* averiguar cuanta cantidad */ /* Se puede cambiar por url de la imagen de la persona para que la IA no se reentrene al cambio de cada empleado */
+	urlImagen varchar(2000), /* MODIFICADO */
+	/*vectorFacial varchar(1000)*/ /* averiguar cuanta cantidad */
 	rol_id int,
 	FOREIGN KEY (rol_id) REFERENCES rol_empleado(id)
 );
-CREATE TABLE turno( /* Pienso que debería cambiar el fechayhorainicio y fechayhorafin por simplemente la hora y el inicio, sin poner una fecha y poner un atributo mas para ver los días que trabaja */ /* Posibilidad de crear otra tabla para los días que trabaja */
+CREATE TABLE diasSemana( /* TABLA NUEVA */
 	id int primary key,
-	fechaYHoraInicio datetime,
-	fechaYHoraFin datetime,
+	dia varchar(50),
+);
+CREATE TABLE turno(
+	id int primary key,
+	HoraInicio time, /* MODIFICADO */
+	HoraFin time, /* MODIFICADO */
 	empleado_id int,
 	foreign key (empleado_id) REFERENCES empleado(id)
+);
+CREATE TABLE diasTurno( /* TABLA NUEVA */
+	id int primary key,
+	turno_id int,
+	diaSemana_id int,
+	FOREIGN KEY (turno_id) REFERENCES turno(id),
+	FOREIGN KEY (diasemana_id) REFERENCES diasSemanaId)
 );
 CREATE TABLE horas(
 	id int primary key,
@@ -65,34 +77,33 @@ CREATE TABLE actividad(
 	tipoActividad varchar(100),
 	fechaYHoraComienzo datetime,
 	fechaYHoraFin datetime,
-	nivelConfianza float, /* No se si esto iría acá. Yo lo sacaría pero por ahora lo dejo. */
 	empleado_id int,
-	camara_id int, /* Camara id no debería ir en highlights?? */
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
-	FOREIGN KEY (camara_id) REFERENCES camara(id)
 );
-/* Tabla muchos a muchos relacionamiento entre actividad y métrica */
 CREATE TABLE metrica(
 	id int primary key,
 	tipo varchar(50),
 	cantidadRealizada float,
+);
+CREATE TABLE inforMetrica( /* TABLA NUEVA */
+	id int primary key,
 	actividad_id int,
-	foreign key (actividad_id) REFERENCES actividad(id) /* Siento que esto no iría porque una métrica reune varias actividades, no una sola*/
+	metrica_id int,
+	FOREIGN KEY (actividad_id) REFERENCES actividad(id),
+	FOREIGN KEY (metrica_id) REFERENCES metrica(id)
 );
 CREATE TABLE alerta(
 	id int primary key,
 	grado varchar(50),
 	incumplimiento varchar(100),
 	fechaYHora datetime,
-	nivelConfianza float, /* Lo mismo que en Actividad, no se si iría esto acá */
 	empleado_id int,
-	camara_id int, /* Camara id no debería ir en highlights?? */
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
-	FOREIGN KEY (camara_id)	REFERENCES camara(id)
 );
-CREATE TABLE highlights( /* No habría que extraer un nuevo video para el highlight??? si no puede ser poner el fragmento(de que minuto a que minuto del video dura)*/ 
+CREATE TABLE highlights( /* MODIFICADO */
 	id int primary key,
-	/* añadir marca de tiempo del highlight */
+	minutoInicio time, /* NUEVO */
+	minutoFin time, /* NUEVO */
 	video_id int,
 	actividad_id int,
 	FOREIGN KEY (video_id) REFERENCES video(id),
@@ -110,15 +121,13 @@ CREATE TABLE revision_alerta(
 );
 CREATE TABLE mov_sospechoso(
 	id int primary key,
-	fechaYHora datetime,
+	minutoInicio time, /* NUEVO */
+	minutoFin time, /* NUEVO */
 	descripcionPersonaInvolucrada varchar(500),
-	nivelConfianza float, /* Lo mismo que en Actividad y Alerta, no se si iría esto acá */
 	boundingBox varchar(500), /* El cuadro con el que la IA detecta el movimiento. */
-	highlight_id int, /* Highlight es para las actividades, no tendría que tener su propio video o en todo caso foreign key de video?? */ 
-	/* Añadir marca de tiempo, borrar highlight id y meter id del video */ 
-	FOREIGN KEY (highlight_id) REFERENCES highlights(id)
+	video_id int, /* NUEVO */
+	FOREIGN KEY (video_id) REFERENCES video(id) /* NUEVO */
 );
-
 /* Pendiente generar inserts para los roles de los empleados*/
 
 /* Delimiter de Stored Procedures */
