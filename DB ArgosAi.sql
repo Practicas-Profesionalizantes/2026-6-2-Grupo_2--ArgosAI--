@@ -57,7 +57,7 @@ CREATE TABLE diasTurno( /* TABLA NUEVA */
 	turno_id int,
 	diaSemana_id int,
 	FOREIGN KEY (turno_id) REFERENCES turno(id),
-	FOREIGN KEY (diasemana_id) REFERENCES diasSemanaId)
+	FOREIGN KEY (diasemana_id) REFERENCES diasSemana(id)
 );
 CREATE TABLE horas(
 	id int primary key,
