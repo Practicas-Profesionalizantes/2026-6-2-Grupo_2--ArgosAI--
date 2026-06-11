@@ -144,7 +144,7 @@ CREATE TABLE auditoria(
 /* Delimiter de Stored Procedures */
 
 DELIMITER // 
-CREATE PROCEDURE cu(IN nombreN VARCHAR(50), IN emailN varchar(50), IN contraseniaN VARCHAR(50), IN telefonoN varchar(50), OUT mensaje varchar(50)) /* Crear Usuario */
+CREATE PROCEDURE cu(IN nombreN VARCHAR(50), IN emailN varchar(50), IN contraseniaN VARCHAR(255), IN telefonoN varchar(50), OUT mensaje varchar(50)) /* Crear Usuario */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
