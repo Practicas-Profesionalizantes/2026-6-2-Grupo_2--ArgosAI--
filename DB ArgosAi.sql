@@ -554,7 +554,7 @@ CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT me
 	SET mensaje = 'Estado de la revisión modificado con éxito.';
  END //
 
-CREATE PROCEDURE gms(IN minutoInicioN time, IN minutoFinN time, IN descripcionPersonaInvolucradaN varchar(500),IN, boundingBoxN varchar(500), id_video int, OUT mensaje varchar(50)) /* Guardar un movimiento sospechoso */
+CREATE PROCEDURE gms(IN minutoInicioN time, IN minutoFinN time, IN descripcionPersonaInvolucradaN varchar(500),IN boundingBoxN varchar(500), id_video int, OUT mensaje varchar(50)) /* Guardar un movimiento sospechoso */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
