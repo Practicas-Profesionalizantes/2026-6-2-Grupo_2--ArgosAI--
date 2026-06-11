@@ -6,7 +6,7 @@ CREATE TABLE usuario(
 	id int primary key,
 	nombre varchar(50),
 	email varchar(50),
-	contrasenia varchar(50),
+	contrasenia varchar(255),
 	telefono varchar(17)
 );
 CREATE TABLE camara(
