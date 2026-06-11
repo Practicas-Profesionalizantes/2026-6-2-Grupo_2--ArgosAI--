@@ -549,7 +549,8 @@ CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT me
 	 END;
 	START TRANSACTION;
 		UPDATE revision_alerta
-		SET estadoRevision = estadoRevisionN;
+		SET estadoRevision = estadoRevisionN
+		WHERE id = id_revision;
 	COMMIT;
 	SET mensaje = 'Estado de la revisión modificado con éxito.';
  END //
