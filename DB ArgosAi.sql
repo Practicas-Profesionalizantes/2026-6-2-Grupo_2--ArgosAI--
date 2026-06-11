@@ -416,7 +416,7 @@ CREATE PROCEDURE ghe(IN cantidadN float, IN id_horas int, OUT mensaje varchar(50
 	SET mensaje = 'Horas extra guardadas con éxito.';
  END //
  
-CREATE PROCEDURE ga(IN tipoActividadN varchar(100), IN fechaYHoraComienzoN datetime, IN fechaYHoraFinN datetime float, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Actividad */
+CREATE PROCEDURE ga(IN tipoActividadN varchar(100), IN fechaYHoraComienzoN datetime, IN fechaYHoraFinN datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Actividad */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
