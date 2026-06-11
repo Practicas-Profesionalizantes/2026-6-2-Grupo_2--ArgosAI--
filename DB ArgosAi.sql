@@ -513,7 +513,7 @@ CREATE PROCEDURE ghi(IN minutoInicioN time, IN minutoFinN time, IN id_video int,
 	SET mensaje = 'Highlight guardado con éxito.';
  END //
 
-CREATE PROCEDURE bhi(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highlight */
+CREATE PROCEDURE bhi(IN id_highlight int, OUT mensaje varchar(50)) /* Borrar Highlight */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
