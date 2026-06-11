@@ -3,20 +3,20 @@ CREATE DATABASE ARGOSAI;
 USE ARGOSAI;
 
 CREATE TABLE usuario(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	nombre varchar(50),
 	email varchar(50),
 	contrasenia varchar(255),
 	telefono varchar(17)
 );
 CREATE TABLE camara(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	ubicacion varchar(50),
 	estado varchar(50),
 	direccionIP varchar(50)
 );
 CREATE TABLE video(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	ruta varchar(1000),
 	fecha date,
 	duracion time,
@@ -26,12 +26,12 @@ CREATE TABLE video(
 	foreign key (camara_id) REFERENCES camara(id) 
 );
 CREATE TABLE rol_empleado(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	nombreRol varchar(50),
 	descripcion varchar(200)
 );
 CREATE TABLE empleado(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	nombre varchar(50),
 	genero varchar(50),
 	rendimiento float,
@@ -42,38 +42,38 @@ CREATE TABLE empleado(
 	FOREIGN KEY (rol_id) REFERENCES rol_empleado(id)
 );
 CREATE TABLE diasSemana( /* TABLA NUEVA */
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	dia varchar(50)
 );
 CREATE TABLE turno(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	HoraInicio time, /* MODIFICADO */
 	HoraFin time, /* MODIFICADO */
 	empleado_id int,
 	foreign key (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE diasTurno( /* TABLA NUEVA */
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	turno_id int,
 	diaSemana_id int,
 	FOREIGN KEY (turno_id) REFERENCES turno(id),
 	FOREIGN KEY (diasemana_id) REFERENCES diasSemana(id)
 );
 CREATE TABLE horas(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	fechaYHoraEntrada datetime,
 	fechaYHoraSalida datetime,
 	empleado_id int,
 	foreign key (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE horas_extra(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	cantidad float,
 	horas_id int,
 	foreign key (horas_id) REFERENCES horas(id)
 );
 CREATE TABLE actividad(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	tipoActividad varchar(100),
 	fechaYHoraComienzo datetime,
 	fechaYHoraFin datetime,
@@ -81,18 +81,18 @@ CREATE TABLE actividad(
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE metrica(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	tipo varchar(50)
 );
 CREATE TABLE inforMetrica( /* TABLA NUEVA */
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	actividad_id int,
 	metrica_id int,
 	FOREIGN KEY (actividad_id) REFERENCES actividad(id),
 	FOREIGN KEY (metrica_id) REFERENCES metrica(id)
 );
 CREATE TABLE alerta(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	grado varchar(50),
 	incumplimiento varchar(100),
 	fechaYHora datetime,
@@ -100,7 +100,7 @@ CREATE TABLE alerta(
 	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE highlights( /* MODIFICADO */
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	minutoInicio time, /* NUEVO */
 	minutoFin time, /* NUEVO */
 	video_id int,
@@ -109,7 +109,7 @@ CREATE TABLE highlights( /* MODIFICADO */
 	FOREIGN KEY (actividad_id) REFERENCES actividad(id)
 );
 CREATE TABLE revision_alerta(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	estadoRevision varchar(50),
 	comentarios varchar(200),
 	fechaYHoraRevision datetime,
@@ -119,7 +119,7 @@ CREATE TABLE revision_alerta(
 	FOREIGN KEY (alerta_id) REFERENCES alerta(id)
 );
 CREATE TABLE mov_sospechoso(
-	id int primary key,
+	id int AUTO_INCREMENT primary key,
 	minutoInicio time, /* NUEVO */
 	minutoFin time, /* NUEVO */
 	descripcionPersonaInvolucrada varchar(500),
