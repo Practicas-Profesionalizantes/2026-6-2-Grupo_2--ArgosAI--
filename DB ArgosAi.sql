@@ -180,7 +180,7 @@ CREATE PROCEDURE vtc(OUT mensaje varchar(50)) /* Ver todas las cámaras */
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	SELECT * FROM camara;
-	SET mensaje = 'Mostrando cámaras..'
+	SET mensaje = 'Mostrando cámaras..';
  END //
  
 CREATE PROCEDURE vdc(IN id_camara int, OUT mensaje varchar(50)) /* Ver datos de una cámara */
@@ -204,7 +204,7 @@ CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar Cámara
 	START TRANSACTION;
 		DELETE FROM camara WHERE id = id_camara;
 	COMMIT;
-	SET mensaje = 'Cámara borrada con éxito.'
+	SET mensaje = 'Cámara borrada con éxito.';
  END //
  
  CREATE PROCEDURE mc(IN id_camara int, IN ubicacionN varchar(50), IN estadoN(50), IN direccionIPN(50), OUT mensaje varchar(50)) /* Modificar Cámara */
