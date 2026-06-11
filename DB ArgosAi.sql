@@ -78,7 +78,7 @@ CREATE TABLE actividad(
 	fechaYHoraComienzo datetime,
 	fechaYHoraFin datetime,
 	empleado_id int,
-	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
+	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE metrica(
 	id int primary key,
@@ -97,7 +97,7 @@ CREATE TABLE alerta(
 	incumplimiento varchar(100),
 	fechaYHora datetime,
 	empleado_id int,
-	FOREIGN KEY (empleado_id) REFERENCES empleado(id),
+	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
 );
 CREATE TABLE highlights( /* MODIFICADO */
 	id int primary key,
