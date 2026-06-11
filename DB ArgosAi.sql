@@ -222,7 +222,7 @@ CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar Cámara
 	SET mensaje = 'Cámara modificada con éxito.';
  END //
  
-CREATE PROCEDURE gv(IN rutaN varchar(1000), IN fechaN date, IN duracionN time, IN tamanoArchivoN float,IN estadoProcesamientoN varchar(50), IN camara_idN int,OUT mensaje varchar(50)) /* Guardar Video */
+CREATE PROCEDURE gv(IN rutaN varchar(1000), IN fechaN date, IN duracionN time, IN tamanoArchivoN float,IN tiempoLimiteN date, IN camara_idN int,OUT mensaje varchar(50)) /* Guardar Video */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -230,8 +230,8 @@ CREATE PROCEDURE gv(IN rutaN varchar(1000), IN fechaN date, IN duracionN time, I
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	START TRANSACTION;
-		INSERT INTO video(ruta, fecha, duracion, tamanoArchivo, estadoProcesamiento, camara_id)
-		VALUES(rutaN, fechaN, duracionN, tamanoArchivoN, estadoProcesamientoN, camara_idN);
+		INSERT INTO video(ruta, fecha, duracion, tamanoArchivo, tiempoLimite, camara_id)
+		VALUES(rutaN, fechaN, duracionN, tamanoArchivoN, tiempoLimiteN, camara_idN);
 	COMMIT;
 	SET mensaje = 'Video guardado con éxito.';
  END //
@@ -472,7 +472,7 @@ CREATE PROCEDURE cdm(IN id_actividad int, IN id_metrica int, OUT mensaje varchar
 	SET mensaje = 'Dato añadido a la métrica con éxito.';
  END //
 		
-CREATE PROCEDURE gal(IN gradoN varchar(50), IN incumplimientoN varchar(100), IN fechaYHora datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Alerta */
+CREATE PROCEDURE gal(IN gradoN varchar(50), IN incumplimientoN varchar(100), IN fechaYHoraN datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Alerta */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -526,7 +526,7 @@ CREATE PROCEDURE bhi(IN id_highlight int, OUT mensaje varchar(50)) /* Borrar Hig
 	SET mensaje = 'Highlight guardado con éxito.';
  END //
 
-CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200), IN fechaYHoraRevision datetime, IN id_usuario int, IN id_alerta int, OUT mensaje varchar(50)) /* Crear una Revisión de Alerta */
+CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentariosN varchar(200), IN fechaYHoraRevisionN datetime, IN id_usuario int, IN id_alerta int, OUT mensaje varchar(50)) /* Crear una Revisión de Alerta */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -816,7 +816,7 @@ CREATE PROCEDURE bms(IN id_movimiento int, OUT mensaje varchar(50)) /* Borrar un
 	FOR EACH ROW
 	BEGIN
 			INSERT INTO auditoria(accion,usuario_id,tablaM,registro_afectado_id,fecha)
-			VALUES ('DELATE',@current_user_id, 'rol_empleado', OLD.id,NOW());
+			VALUES ('DELETE',@current_user_id, 'rol_empleado', OLD.id,NOW());
 	END // 
 
 	CREATE TRIGGER trg_after_delete_empleado
