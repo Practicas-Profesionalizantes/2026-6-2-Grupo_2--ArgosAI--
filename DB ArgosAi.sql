@@ -43,7 +43,7 @@ CREATE TABLE empleado(
 );
 CREATE TABLE diasSemana( /* TABLA NUEVA */
 	id int primary key,
-	dia varchar(50),
+	dia varchar(50)
 );
 CREATE TABLE turno(
 	id int primary key,
@@ -139,7 +139,7 @@ CREATE TABLE auditoria(
 );
 
 
-/* Pendiente generar inserts para los roles de los empleados y para los dÌas de la semana*/
+/* Pendiente generar inserts para los roles de los empleados y para los d√≠as de la semana*/
 
 /* Delimiter de Stored Procedures */
 
@@ -155,10 +155,10 @@ CREATE PROCEDURE cu(IN nombreN VARCHAR(50), IN emailN varchar(50), IN contraseni
 		INSERT INTO usuario(nombre, email, contrasenia, telefono)
 		VALUES(nombreN, emailN, contraseniaN, telefonoN);
 	COMMIT;
-	SET mensaje = 'Usuario creado con Èxito.'
+	SET mensaje = 'Usuario creado con √©xito.'
  END //
  
-CREATE PROCEDURE gc(IN ubicacionN VARCHAR(50), IN estadoN varchar(50), IN direccionIPN VARCHAR(50), OUT mensaje varchar(50)) /* Guardar C·mara */
+CREATE PROCEDURE gc(IN ubicacionN VARCHAR(50), IN estadoN varchar(50), IN direccionIPN VARCHAR(50), OUT mensaje varchar(50)) /* Guardar C√°mara */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -169,10 +169,10 @@ CREATE PROCEDURE gc(IN ubicacionN VARCHAR(50), IN estadoN varchar(50), IN direcc
 		INSERT INTO camara(ubicacion, estado, direccionIP)
 		VALUES(ubicacionN, estadoN, direccionIPN);
 	COMMIT;
-	SET mensaje = 'C·mara guardada con Èxito.'
+	SET mensaje = 'C√°mara guardada con √©xito.'
  END //
  
-CREATE PROCEDURE vtc(OUT mensaje varchar(50)) /* Ver todas las c·maras */
+CREATE PROCEDURE vtc(OUT mensaje varchar(50)) /* Ver todas las c√°maras */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -180,10 +180,10 @@ CREATE PROCEDURE vtc(OUT mensaje varchar(50)) /* Ver todas las c·maras */
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	SELECT * FROM camara;
-	SET mensaje = 'Mostrando c·maras..'
+	SET mensaje = 'Mostrando c√°maras..'
  END //
  
-CREATE PROCEDURE vdc(IN id_camara int, OUT mensaje varchar(50)) /* Ver datos de una c·mara */
+CREATE PROCEDURE vdc(IN id_camara int, OUT mensaje varchar(50)) /* Ver datos de una c√°mara */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -191,10 +191,10 @@ CREATE PROCEDURE vdc(IN id_camara int, OUT mensaje varchar(50)) /* Ver datos de 
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	SELECT * FROM camara WHERE id = id_camara;
-	SET mensaje = CONCAT('Mostrando datos de la c·mara con el id .', id_camara)
+	SET mensaje = CONCAT('Mostrando datos de la c√°mara con el id .', id_camara)
  END //
  
-CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar C·mara */
+CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar C√°mara */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -204,10 +204,10 @@ CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar C·mara 
 	START TRANSACTION;
 		DELETE FROM camara WHERE id = id_camara;
 	COMMIT;
-	SET mensaje = 'C·mara borrada con Èxito.'
+	SET mensaje = 'C√°mara borrada con √©xito.'
  END //
  
- CREATE PROCEDURE mc(IN id_camara int, IN ubicacionN varchar(50), IN estadoN(50), IN direccionIPN(50), OUT mensaje varchar(50)) /* Modificar C·mara */
+ CREATE PROCEDURE mc(IN id_camara int, IN ubicacionN varchar(50), IN estadoN(50), IN direccionIPN(50), OUT mensaje varchar(50)) /* Modificar C√°mara */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -219,7 +219,7 @@ CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar C·mara 
 		SET ubicacion = ubicacionN, estado = estadoN, direccionIP = direccionIPN
 		WHERE id = id_camara;
 	COMMIT;
-	SET mensaje = 'C·mara modificada con Èxito.'
+	SET mensaje = 'C√°mara modificada con √©xito.'
  END //
  
 CREATE PROCEDURE gv(IN rutaN varchar(1000), IN fechaN date, IN duracionN time, IN tamanoArchivoN float,IN estadoProcesamientoN varchar(50), IN camara_idN int,OUT mensaje varchar(50)) /* Guardar Video */
@@ -233,7 +233,7 @@ CREATE PROCEDURE gv(IN rutaN varchar(1000), IN fechaN date, IN duracionN time, I
 		INSERT INTO video(ruta, fecha, duracion, tamanoArchivo, estadoProcesamiento, camara_id)
 		VALUES(rutaN, fechaN, duracionN, tamanoArchivoN, estadoProcesamientoN, camara_idN);
 	COMMIT;
-	SET mensaje = 'Video guardado con Èxito.'
+	SET mensaje = 'Video guardado con √©xito.'
  END //
  
 CREATE PROCEDURE mv(OUT mensaje varchar(50)) /* Mostrar Videos */
@@ -257,7 +257,7 @@ CREATE PROCEDURE bv(IN id_video int, OUT mensaje varchar(50)) /* Borrar Video */
     START TRANSTACTION;
 		DELETE FROM video WHERE id = id_video;
 	COMMIT;
-	SET mensaje = 'Video borrado con Èxito'
+	SET mensaje = 'Video borrado con √©xito'
  END //
  
 CREATE PROCEDURE ce(IN nombreN varchar(50), IN generoN varchar(50), IN rendimientoN float, IN estadoN varchar(50), IN urlImagenN varchar(2000), IN id_rol int, OUT mensaje varchar(50)) /* Crear Empleado */
@@ -271,7 +271,7 @@ CREATE PROCEDURE ce(IN nombreN varchar(50), IN generoN varchar(50), IN rendimien
 		INSERT INTO empleado(nombre, genero, rendimiento, estado, urlImagen, rol_id)
 		VALUES(nombreN, generoN, rendimientoN, estadoN, urlImagenN, id_rol);
 	COMMIT;
-	SET mensaje = 'Empleado guardado con Èxito.'
+	SET mensaje = 'Empleado guardado con √©xito.'
  END //
  
 CREATE PROCEDURE be(IN id_empleado int, OUT mensaje varchar(50)) /* Borrar Empleado */
@@ -284,7 +284,7 @@ CREATE PROCEDURE be(IN id_empleado int, OUT mensaje varchar(50)) /* Borrar Emple
 	START TRANSACTION;
 		DELETE FROM empleado WHERE id = id_empleado;
 	COMMIT;
-	SET mensaje = 'Empleado borrado con Èxito.'
+	SET mensaje = 'Empleado borrado con √©xito.'
  END //
  
  CREATE PROCEDURE me(IN id_empleado int, IN nombreN varchar(50), IN generoN varchar(50), IN rendimientoN float, IN estadoN varchar(50), IN urlImagenN varchar(2000), IN id_rol int, OUT mensaje varchar(50)) /* Modificar Empleado */
@@ -299,7 +299,7 @@ CREATE PROCEDURE be(IN id_empleado int, OUT mensaje varchar(50)) /* Borrar Emple
 		SET nombre = nombreN, genero = generoN, rendimiento = rendimientoN, estado = estadoN, urlImagen = urlImagenN, rol_id = id_rol 
 		WHERE id = id_empleado;
 	COMMIT;
-	SET mensaje = 'Datos del empleado actualizados con Èxito.'
+	SET mensaje = 'Datos del empleado actualizados con √©xito.'
  END //
  
 CREATE PROCEDURE ct(IN HoraInicioN time, IN HoraFinN time, IN id_empleado int, OUT mensaje varchar(50)) /* Crear Turno */
@@ -313,10 +313,10 @@ CREATE PROCEDURE ct(IN HoraInicioN time, IN HoraFinN time, IN id_empleado int, O
 		INSERT INTO turno(HoraInicio, HoraFin, empleado_id)
 		VALUES(HoraInicioN, HoraFinN, id_empleado);
 	COMMIT;
-	SET mensaje = 'Turno del empleado asignado con Èxito.'
+	SET mensaje = 'Turno del empleado asignado con √©xito.'
  END //
 
-CREATE PROCEDURE gdt(IN id_turno int, IN id_diaSemana int, OUT mensaje varchar(50)) /* Guardar DÌas de un Turno */
+CREATE PROCEDURE gdt(IN id_turno int, IN id_diaSemana int, OUT mensaje varchar(50)) /* Guardar D√≠as de un Turno */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -327,7 +327,7 @@ CREATE PROCEDURE gdt(IN id_turno int, IN id_diaSemana int, OUT mensaje varchar(5
 		INSERT INTO diasTurno(turno_id, diaSemana_id)
 		VALUES(id_turno, id_diaSemana);
 	COMMIT;
-	SET mensaje = 'Di·s de turnos del empleado asignado con Èxito.'
+	SET mensaje = 'Di√°s de turnos del empleado asignado con √©xito.'
  END //
 		
 CREATE PROCEDURE bt(IN id_turno int, OUT mensaje varchar(50)) /* Borrar Turno */
@@ -340,7 +340,7 @@ CREATE PROCEDURE bt(IN id_turno int, OUT mensaje varchar(50)) /* Borrar Turno */
 	START TRANSACTION;
 		DELETE FROM turno WHERE id = id_turno;
 	COMMIT;
-	SET mensaje = 'Turno del empleado eliminado con Èxito.'
+	SET mensaje = 'Turno del empleado eliminado con √©xito.'
  END //
  
 CREATE PROCEDURE mt(OUT mensaje varchar(50)) /* Mostrar Turnos */
@@ -376,7 +376,7 @@ CREATE PROCEDURE mte(IN id_empleado, OUT mensaje varchar(50)) /* Mostrar Turnos 
 	SELECT * FROM turno WHERE empleado_id = id_empleado;
 	SET mensaje = 'Mostrando todos los turnos del empleado seleccionado...'
  END //
- Posible SP en caso de cambiar la tabla de turnos(NO ESTA HECHO TODAVÕA)      TAMBIEN POSIBILIDAD DE UN SP DE MODIFICAR TURNO*/
+ Posible SP en caso de cambiar la tabla de turnos(NO ESTA HECHO TODAV√çA)      TAMBIEN POSIBILIDAD DE UN SP DE MODIFICAR TURNO*/
  
 CREATE PROCEDURE gh(IN fechaYHoraEntradaN datetime, fechaYHoraSalidaN datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Horas */
  BEGIN
@@ -389,7 +389,7 @@ CREATE PROCEDURE gh(IN fechaYHoraEntradaN datetime, fechaYHoraSalidaN datetime, 
 		INSERT INTO horas(fechaYHoraEntrada, fechaYHoraSalida, empleado_id)
 		VALUES(fechaYHoraEntradaN, fechaYHoraSalidaN, id_empleado);
 	COMMIT;
-	SET mensaje = 'Horas guardadas con Èxito'
+	SET mensaje = 'Horas guardadas con √©xito'
  END //
  
 CREATE PROCEDURE vhef(IN id_empleado int, IN fecha date, OUT mensaje varchar(50)) /* Ver Horas de un Empleado en una Fecha */
@@ -400,7 +400,7 @@ CREATE PROCEDURE vhef(IN id_empleado int, IN fecha date, OUT mensaje varchar(50)
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	SELECT * FROM horas WHERE empleado_id = id_empleado AND DATE(fechaYHoraEntrada) = fecha;
-	SET mensaje = 'Mostrando las horas del empleado seleccionado en el dÌa seleccionado...'
+	SET mensaje = 'Mostrando las horas del empleado seleccionado en el d√≠a seleccionado...'
  END //
  
 CREATE PROCEDURE ghe(IN cantidadN float, IN id_horas int, OUT mensaje varchar(50)) /* Guardar Horas Extra */
@@ -414,7 +414,7 @@ CREATE PROCEDURE ghe(IN cantidadN float, IN id_horas int, OUT mensaje varchar(50
 		INSERT INTO horas_extra(cantidad, horas_id)
 		VALUES(cantidadN, id_horas);
 	COMMIT;
-	SET mensaje = 'Horas extra guardadas con Èxito.'
+	SET mensaje = 'Horas extra guardadas con √©xito.'
  END //
  
 CREATE PROCEDURE ga(IN tipoActividadN varchar(100), IN fechaYHoraComienzoN datetime, IN fechaYHoraFinN datetime, float, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Actividad */
@@ -428,7 +428,7 @@ CREATE PROCEDURE ga(IN tipoActividadN varchar(100), IN fechaYHoraComienzoN datet
 		INSERT INTO actividad(tipoActividad, fechaYHoraComienzo, fechaYHoraFin, empleado_id)
 		VALUES(tipoActividadN, fechaYHoraComienzoN, fechaYHoraFinN, id_empleado);
 	COMMIT;
-	SET mensaje = 'Actividad guardada con Èxito.'
+	SET mensaje = 'Actividad guardada con √©xito.'
  END //
  
 CREATE PROCEDURE ba(IN id_actividad int, OUT mensaje varchar(50)) /* Borrar Actividad */
@@ -444,8 +444,8 @@ CREATE PROCEDURE ba(IN id_actividad int, OUT mensaje varchar(50)) /* Borrar Acti
 	SET mensaje = 'Actividad Borrada.'
  END //
  
- /* Sin SP de mÈtricas hasta corregir o estar seguro que la tabla de mÈtrica esta bien.*/
-CREATE PROCEDURE cm(IN tipoN varchar(50), OUT mensaje varchar(50)) /* Crear MÈtrica */
+ /* Sin SP de m√©tricas hasta corregir o estar seguro que la tabla de m√©trica esta bien.*/
+CREATE PROCEDURE cm(IN tipoN varchar(50), OUT mensaje varchar(50)) /* Crear M√©trica */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -456,10 +456,10 @@ CREATE PROCEDURE cm(IN tipoN varchar(50), OUT mensaje varchar(50)) /* Crear MÈtr
 		INSERT INTO metrica(tipo)
 		VALUES(tipoN);
 	COMMIT;
-	SET mensaje = 'Metrica guardada con Èxito.'
+	SET mensaje = 'Metrica guardada con √©xito.'
  END //
 
-CREATE PROCEDURE cdm(IN id_actividad int, IN id_metrica int, OUT mensaje varchar(50)) /* Cargar Datos de una MÈtrica */
+CREATE PROCEDURE cdm(IN id_actividad int, IN id_metrica int, OUT mensaje varchar(50)) /* Cargar Datos de una M√©trica */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -470,7 +470,7 @@ CREATE PROCEDURE cdm(IN id_actividad int, IN id_metrica int, OUT mensaje varchar
 		INSERT INTO inforMetrica(actividad_id, metrica_id)
 		VALUES(id_actividad, id_metrica);
 	COMMIT;
-	SET mensaje = 'Dato aÒadido a la mÈtrica con Èxito.'
+	SET mensaje = 'Dato a√±adido a la m√©trica con √©xito.'
  END //
 		
 CREATE PROCEDURE gal(IN gradoN varchar(50), IN incumplimientoN varchar(100), IN fechaYHora datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Alerta */
@@ -484,7 +484,7 @@ CREATE PROCEDURE gal(IN gradoN varchar(50), IN incumplimientoN varchar(100), IN 
 		INSERT INTO alerta(grado, incumplimiento, fechaYHora, empleado_id)
 		VALUES(gradoN, incumplimientoN, fechaYHoraN, id_empleado);
 	COMMIT;
-	SET mensaje = 'Alerta guardada con Èxito.'
+	SET mensaje = 'Alerta guardada con √©xito.'
  END //
  
 CREATE PROCEDURE bal(IN id_alerta int , OUT mensaje varchar(50)) /* Borrar Alerta */
@@ -497,7 +497,7 @@ CREATE PROCEDURE bal(IN id_alerta int , OUT mensaje varchar(50)) /* Borrar Alert
 	START TRANSACTION;
 		DELETE FROM alerta WHERE id = id_alerta;
 	COMMIT;
-	SET mensaje = 'Alerta guardada con Èxito.'
+	SET mensaje = 'Alerta guardada con √©xito.'
  END //
 
 CREATE PROCEDURE gh(IN minutoInicioN time, IN minutoFinN time, IN id_video int, id_actividad int, OUT mensaje varchar(50)) /* Guardar Highlight */
@@ -511,7 +511,7 @@ CREATE PROCEDURE gh(IN minutoInicioN time, IN minutoFinN time, IN id_video int, 
 		INSERT INTO highlights(minutoInicio, minutoFin, video_id, actividad_id)
 		VALUES(minutoInicioN, minutoFinN, id_video, id_actividad);
 	COMMIT;
-	SET mensaje = 'Highlight guardado con Èxito.'
+	SET mensaje = 'Highlight guardado con √©xito.'
  END //
 
 CREATE PROCEDURE bh(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highlight */
@@ -524,10 +524,10 @@ CREATE PROCEDURE bh(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highligh
 	START TRANSACTION;
 		DELETE FROM highlights WHERE id = id_highlight;
 	COMMIT;
-	SET mensaje = 'Highlight guardado con Èxito.'
+	SET mensaje = 'Highlight guardado con √©xito.'
  END //
 
-CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200), IN fechaYHoraRevision datetime, IN id_usuario int, IN id_alerta int, OUT mensaje varchar(50)) /* Crear una RevisiÛn de Alerta */
+CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200), IN fechaYHoraRevision datetime, IN id_usuario int, IN id_alerta int, OUT mensaje varchar(50)) /* Crear una Revisi√≥n de Alerta */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -538,10 +538,10 @@ CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200)
 		INSERT INTO revision_alerta(estadoRevision, comentarios, fechaYHoraRevision, usuario_id, alerta_id)
 		VALUES(estadoRevisionN, comentariosN, fechaYHoraRevisionN, id_usuario, id_alerta)
 	COMMIT;
-	SET mensaje = 'RevisiÛn de alerta creada con Èxito.'
+	SET mensaje = 'Revisi√≥n de alerta creada con √©xito.'
  END //
 
-CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT mensaje varchar(50)) /* Modificar el Estado de una RevisiÛn de Alerta */
+CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT mensaje varchar(50)) /* Modificar el Estado de una Revisi√≥n de Alerta */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -552,7 +552,7 @@ CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT me
 		UPDATE revision_alerta
 		SET estadoRevision = estadoRevisionN
 	COMMIT;
-	SET mensaje = 'Estado de la revisiÛn modificado con Èxito.'
+	SET mensaje = 'Estado de la revisi√≥n modificado con √©xito.'
  END //		
 
 CREATE PROCEDURE gms(IN minutoInicioN time, IN minutoFinN time, IN descripcionPersonaInvolucradaN varchar(500),IN, boundingBoxN varchar(500), id_video int, OUT mensaje varchar(50)) /* Guardar un movimiento sospechoso */
@@ -566,7 +566,7 @@ CREATE PROCEDURE gms(IN minutoInicioN time, IN minutoFinN time, IN descripcionPe
 		INSERT INTO mov_sospechoso(minutoInicio, minutoFin, descripcionPersonaInvolucrada, boundingBox, video_id)
 		VALUES(minutoInicioN, minutoFinN, descripcionPersonaInvolucradaN, boundingBoxN, id_video);
 	COMMIT;
-	SET mensaje = 'Movimiento sospechoso registrado con Èxito.'
+	SET mensaje = 'Movimiento sospechoso registrado con √©xito.'
  END //		
 
 CREATE PROCEDURE bms(IN id_movimiento, OUT mensaje varchar(50)) /* Borrar un movimiento sospechoso */
@@ -579,7 +579,7 @@ CREATE PROCEDURE bms(IN id_movimiento, OUT mensaje varchar(50)) /* Borrar un mov
 	START TRANSACTION;
 		DELETE FROM mov_sospechoso WHERE id = id_movimiento;
 	COMMIT;
-	SET mensaje = 'Movimiento sospechoso registrado con Èxito.'
+	SET mensaje = 'Movimiento sospechoso registrado con √©xito.'
  END //
  DELIMITER ;
 
