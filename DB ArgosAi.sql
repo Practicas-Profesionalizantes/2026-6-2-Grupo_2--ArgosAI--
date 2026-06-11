@@ -254,7 +254,7 @@ CREATE PROCEDURE bv(IN id_video int, OUT mensaje varchar(50)) /* Borrar Video */
 	  ROLLBACK;
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
-    START TRANSTACTION;
+    START TRANSACTION;
 		DELETE FROM video WHERE id = id_video;
 	COMMIT;
 	SET mensaje = 'Video borrado con éxito';
