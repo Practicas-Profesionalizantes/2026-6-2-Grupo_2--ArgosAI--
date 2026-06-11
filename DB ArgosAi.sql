@@ -354,7 +354,7 @@ CREATE PROCEDURE mt(OUT mensaje varchar(50)) /* Mostrar Turnos */
 	SET mensaje = 'Mostrando todos los turnos...';
  END //
  
-CREATE PROCEDURE mte(IN id_empleado, OUT mensaje varchar(50)) /* Mostrar Turnos de Empleado */
+CREATE PROCEDURE mte(IN id_empleado int, OUT mensaje varchar(50)) /* Mostrar Turnos de Empleado */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
