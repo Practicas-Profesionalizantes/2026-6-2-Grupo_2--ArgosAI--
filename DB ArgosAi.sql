@@ -365,18 +365,17 @@ CREATE PROCEDURE mte(IN id_empleado int, OUT mensaje varchar(50)) /* Mostrar Tur
 	SET mensaje = 'Mostrando todos los turnos del empleado seleccionado...';
  END //
  
- /*
- CREATE PROCEDURE mtrh(IN hora1 time, hora2 time, OUT mensaje varchar(50)) /* Mostrar Turnos en un Rango de Horas */
- BEGIN
-	DECLARE EXIT HANDLER FOR SQLEXCEPTION
-	 BEGIN
-	  ROLLBACK;
-	  SET mensaje = 'Ocurrio un error.';
-	 END;
-	SELECT * FROM turno WHERE empleado_id = id_empleado;
-	SET mensaje = 'Mostrando todos los turnos del empleado seleccionado...'
- END //
- Posible SP en caso de cambiar la tabla de turnos(NO ESTA HECHO TODAVÍA)      TAMBIEN POSIBILIDAD DE UN SP DE MODIFICAR TURNO*/
+ /*CREATE PROCEDURE mtrh(IN hora1 time, hora2 time, OUT mensaje varchar(50)) Mostrar Turnos en un Rango de Horas */
+ /*BEGIN*/
+	/*DECLARE EXIT HANDLER FOR SQLEXCEPTION*/
+	 /*BEGIN*/
+	  /*ROLLBACK;*/
+	  /*SET mensaje = 'Ocurrio un error.';*/
+	 /*END;*/
+	/*SELECT * FROM turno WHERE empleado_id = id_empleado;*/
+	/*SET mensaje = 'Mostrando todos los turnos del empleado seleccionado...'*/
+ /*END */
+ /*Posible SP en caso de cambiar la tabla de turnos(NO ESTA HECHO TODAVÍA)      TAMBIEN POSIBILIDAD DE UN SP DE MODIFICAR TURNO*/
  
 CREATE PROCEDURE gh(IN fechaYHoraEntradaN datetime, fechaYHoraSalidaN datetime, IN id_empleado int, OUT mensaje varchar(50)) /* Guardar Horas */
  BEGIN
