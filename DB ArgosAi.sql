@@ -499,7 +499,7 @@ CREATE PROCEDURE bal(IN id_alerta int , OUT mensaje varchar(50)) /* Borrar Alert
 	SET mensaje = 'Alerta guardada con éxito.';
  END //
 
-CREATE PROCEDURE gh(IN minutoInicioN time, IN minutoFinN time, IN id_video int, id_actividad int, OUT mensaje varchar(50)) /* Guardar Highlight */
+CREATE PROCEDURE ghi(IN minutoInicioN time, IN minutoFinN time, IN id_video int, id_actividad int, OUT mensaje varchar(50)) /* Guardar Highlight */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
@@ -513,7 +513,7 @@ CREATE PROCEDURE gh(IN minutoInicioN time, IN minutoFinN time, IN id_video int, 
 	SET mensaje = 'Highlight guardado con éxito.';
  END //
 
-CREATE PROCEDURE bh(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highlight */
+CREATE PROCEDURE bhi(IN id_highlight, OUT mensaje varchar(50)) /* Borrar Highlight */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
