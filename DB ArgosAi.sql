@@ -207,7 +207,7 @@ CREATE PROCEDURE bc(IN id_camara int, OUT mensaje varchar(50)) /* Borrar Cámara
 	SET mensaje = 'Cámara borrada con éxito.';
  END //
  
- CREATE PROCEDURE mc(IN id_camara int, IN ubicacionN varchar(50), IN estadoN(50), IN direccionIPN(50), OUT mensaje varchar(50)) /* Modificar Cámara */
+ CREATE PROCEDURE mc(IN id_camara int, IN ubicacionN varchar(50), IN estadoN varchar(50), IN direccionIPN varchar(50), OUT mensaje varchar(50)) /* Modificar Cámara */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
