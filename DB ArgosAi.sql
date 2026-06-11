@@ -156,7 +156,7 @@ CREATE PROCEDURE cu(IN nombreN VARCHAR(50), IN emailN varchar(50), IN contraseni
 		VALUES(nombreN, emailN, contraseniaN, telefonoN);
 	COMMIT;
 	SET mensaje = 'Usuario creado con éxito.';
- END ;
+ END //
  
 CREATE PROCEDURE gc(IN ubicacionN VARCHAR(50), IN estadoN varchar(50), IN direccionIPN VARCHAR(50), OUT mensaje varchar(50)) /* Guardar Cámara */
  BEGIN
