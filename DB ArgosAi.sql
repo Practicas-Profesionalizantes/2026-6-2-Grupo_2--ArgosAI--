@@ -244,7 +244,7 @@ CREATE PROCEDURE mv(OUT mensaje varchar(50)) /* Mostrar Videos */
 	  SET mensaje = 'Ocurrio un error.';
 	 END;
 	SELECT * FROM video;
-	SET mensaje = 'Mostrando videos...'
+	SET mensaje = 'Mostrando videos...';
  END //
  
 CREATE PROCEDURE bv(IN id_video int, OUT mensaje varchar(50)) /* Borrar Video */
@@ -313,7 +313,7 @@ CREATE PROCEDURE ct(IN HoraInicioN time, IN HoraFinN time, IN id_empleado int, O
 		INSERT INTO turno(HoraInicio, HoraFin, empleado_id)
 		VALUES(HoraInicioN, HoraFinN, id_empleado);
 	COMMIT;
-	SET mensaje = 'Turno del empleado asignado con éxito.'
+	SET mensaje = 'Turno del empleado asignado con éxito.';
  END //
 
 CREATE PROCEDURE gdt(IN id_turno int, IN id_diaSemana int, OUT mensaje varchar(50)) /* Guardar Días de un Turno */
