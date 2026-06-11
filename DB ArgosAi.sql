@@ -535,7 +535,7 @@ CREATE PROCEDURE cra(IN estadoRevisionN varchar(50), IN comentarios varchar(200)
 	 END;
 	START TRANSACTION;
 		INSERT INTO revision_alerta(estadoRevision, comentarios, fechaYHoraRevision, usuario_id, alerta_id)
-		VALUES(estadoRevisionN, comentariosN, fechaYHoraRevisionN, id_usuario, id_alerta)
+		VALUES(estadoRevisionN, comentariosN, fechaYHoraRevisionN, id_usuario, id_alerta);
 	COMMIT;
 	SET mensaje = 'Revisión de alerta creada con éxito.';
  END //
@@ -549,7 +549,7 @@ CREATE PROCEDURE mera(IN id_revision int, IN estadoRevisionN varchar(50), OUT me
 	 END;
 	START TRANSACTION;
 		UPDATE revision_alerta
-		SET estadoRevision = estadoRevisionN
+		SET estadoRevision = estadoRevisionN;
 	COMMIT;
 	SET mensaje = 'Estado de la revisión modificado con éxito.';
  END //
@@ -568,7 +568,7 @@ CREATE PROCEDURE gms(IN minutoInicioN time, IN minutoFinN time, IN descripcionPe
 	SET mensaje = 'Movimiento sospechoso registrado con éxito.';
  END //
 
-CREATE PROCEDURE bms(IN id_movimiento, OUT mensaje varchar(50)) /* Borrar un movimiento sospechoso */
+CREATE PROCEDURE bms(IN id_movimiento int, OUT mensaje varchar(50)) /* Borrar un movimiento sospechoso */
  BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	 BEGIN
