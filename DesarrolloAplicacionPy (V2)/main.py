@@ -16,7 +16,7 @@ def iniciar_app_escritorio():
     
     # Iniciamos el servidor de Streamlit de forma silenciosa
     subprocess.Popen(comando, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
+    time.sleep(2)
     # 3. Forzamos a abrir la interfaz en una ventana nativa limpia (Modo App de Chrome/Edge)
     # Esto elimina las barras de navegación, historial y pestañas para simular un software clásico
     url = "http://localhost:8501"

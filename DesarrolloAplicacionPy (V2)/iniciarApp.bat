@@ -4,7 +4,7 @@ title Cargando Panel Inteligente ArgosIA...
 :: 1. Cerramos cualquier proceso previo colgado para liberar los puertos
 taskkill /f /im python.exe >nul 2>&1
 
-:: 2. Nos posicionamos de forma absoluta en la carpeta del proyecto
+:: 2. Nos posicionamos de forma absoluta en la carpeta del proyecto (Cambiar esto segun la computadora) 
 cd /d "C:\Users\Thiago\Desktop\DesarrolloAplicacionPy"
 
 :: 3. Levantamos el servidor de la app de forma silenciosa y aislada
