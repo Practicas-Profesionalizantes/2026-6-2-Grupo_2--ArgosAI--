@@ -1,7 +1,46 @@
+# con-front/app-fr.py (Tu interfaz de Streamlit modificada)
 import streamlit as st
 import time
 import pandas as pd
 from datetime import date, datetime, time as dtime
+import socketio
+import threading 
+
+
+# ============================================================
+# CONEXIÓN TIEMPO REAL CON EL BACKEND (EL PUENTE)
+# ============================================================
+if "sio" not in st.session_state:
+    st.session_state.sio = socketio.Client()
+
+# Definimos los eventos del WebSocket del lado del cliente
+@st.session_state.sio.event
+def connect():
+    print("\n[WS] ¡Conectado al servidor Backend con éxito!")
+
+@st.session_state.sio.on('actualizacion_servidor')
+def al_recibir_actualizacion(data):
+    print(f"\n[ALERTA] ¡El backend envió datos nuevos!: {data}")
+    
+    # EJEMPLO: Si llega un nuevo incidente, lo insertamos directo en la memoria de la app
+    if "incidentes_seg" in st.session_state and isinstance(data, dict):
+        st.session_state.incidentes_seg.insert(0, data)
+        
+    # Forzamos a Streamlit a redibujar la pantalla al instante con el nuevo dato
+    st.rerun()
+
+# Función para iniciar la conexión sin bloquear a Streamlit
+def iniciar_escucha_backend():
+    try:
+        if not st.session_state.sio.connected:
+            st.session_state.sio.connect('http://localhost:5000')
+    except Exception as e:
+        print(f"[WS ERROR] No se pudo conectar al backend: {e}")
+
+# Si el hilo no está corriendo, lo encendemos en segundo plano
+if not st.session_state.sio.connected:
+    hilo = threading.Thread(target=iniciar_escucha_backend, daemon=True)
+    hilo.start()
 
 # ============================================================
 # CONFIGURACIÓN GENERAL
@@ -246,38 +285,44 @@ st.markdown("""
 
 
 # ============================================================
-# ESTADO DE SESIÓN
+# ESTADO DE SESIÓN (Versión Optimizada para Tiempo Real)
 # ============================================================
-DEFAULTS = {
-    "autenticado": False,
-    "menu_actual": "📺 Monitoreo",
-    "usuario_input": "",
-    "clave_input": "",
-    # Datos en memoria (en producción vendría de BD)
-    "empleados": [
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if "menu_actual" not in st.session_state:
+    st.session_state.menu_actual = "📺 Monitoreo"
+
+if "usuario_input" not in st.session_state:
+    st.session_state.usuario_input = ""
+
+if "clave_input" not in st.session_state:
+    st.session_state.clave_input = ""
+
+if "empleados" not in st.session_state:
+    st.session_state.empleados = [
         {"legajo": "EMP001", "nombre": "Juan Pérez",    "rol": "Barista",             "turno": "Mañana",  "activo": True},
         {"legajo": "EMP002", "nombre": "María Gómez",   "rol": "Cajero",              "turno": "Tarde",   "activo": True},
         {"legajo": "EMP003", "nombre": "Carlos López",  "rol": "Personal de Cocina",  "turno": "Mañana",  "activo": True},
-    ],
-    "turnos": [
+    ]
+
+if "turnos" not in st.session_state:
+    st.session_state.turnos = [
         {"legajo": "EMP001", "nombre": "Juan Pérez",   "entrada": "08:00", "salida": "16:00", "fecha": "2026-06-18", "horas": 8},
         {"legajo": "EMP002", "nombre": "María Gómez",  "entrada": "14:00", "salida": "22:00", "fecha": "2026-06-18", "horas": 8},
-    ],
-    "incidentes_seg": [
+    ]
+
+if "incidentes_seg" not in st.session_state:
+    st.session_state.incidentes_seg = [
         {"hora": "14:32:10", "camara": "Cam 01", "descripcion": "Ingreso no autorizado a zona restringida", "gravedad": "Alta"},
         {"hora": "09:15:44", "camara": "Cam 03", "descripcion": "Persona sin identificación en almacén",   "gravedad": "Media"},
-    ],
-    "incidentes_inc": [
+    ]
+
+if "incidentes_inc" not in st.session_state:
+    st.session_state.incidentes_inc = [
         {"hora": "11:20:15", "camara": "Cam 02", "descripcion": "Demora crítica en despacho (>15 min)",    "sector": "Cocina",  "gravedad": "Alta"},
         {"hora": "13:45:00", "camara": "Cam 01", "descripcion": "Empleado abandona puesto sin autorización","sector": "Salón",   "gravedad": "Media"},
-    ],
-}
-
-for key, val in DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = val
-
-
+    ]
 # ============================================================
 # HELPERS
 # ============================================================
