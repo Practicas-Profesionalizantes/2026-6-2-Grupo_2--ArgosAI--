@@ -1,0 +1,481 @@
+CREATE DATABASE ARGOSAI;
+
+USE ARGOSAI;
+
+CREATE TABLE usuario(
+	id int AUTO_INCREMENT primary key,
+	nombre varchar(50),
+	email varchar(50),
+	contrasenia varchar(255),
+	telefono varchar(17)
+);
+CREATE TABLE camara(
+	id int AUTO_INCREMENT primary key,
+	ubicacion varchar(50),
+	estado varchar(50),
+	direccionIP varchar(50)
+);
+CREATE TABLE video(
+	id int AUTO_INCREMENT primary key,
+	ruta varchar(1000),
+	fecha date,
+	duracion time,
+	tamanoArchivo float,
+	tiempoLimite date, /* EstadoProcesamiento */ /* Cuando sea la fecha que marca se borra */
+	camara_id int,
+	foreign key (camara_id) REFERENCES camara(id) 
+);
+CREATE TABLE rol_empleado(
+	id int AUTO_INCREMENT primary key,
+	nombreRol varchar(50),
+	descripcion varchar(200)
+);
+CREATE TABLE empleado(
+	id int AUTO_INCREMENT primary key,
+	nombre varchar(50),
+	genero varchar(50),
+	rendimiento float,
+	estado varchar(50),
+	urlImagen varchar(2000), /* MODIFICADO */
+	/*vectorFacial varchar(1000)*/ /* averiguar cuanta cantidad */
+	rol_id int,
+	FOREIGN KEY (rol_id) REFERENCES rol_empleado(id)
+);
+CREATE TABLE diasSemana( /* TABLA NUEVA */
+	id int AUTO_INCREMENT primary key,
+	dia varchar(50)
+);
+CREATE TABLE turno(
+	id int AUTO_INCREMENT primary key,
+	HoraInicio time, /* MODIFICADO */
+	HoraFin time, /* MODIFICADO */
+	empleado_id int,
+	foreign key (empleado_id) REFERENCES empleado(id)
+);
+CREATE TABLE diasTurno( /* TABLA NUEVA */
+	id int AUTO_INCREMENT primary key,
+	turno_id int,
+	diaSemana_id int,
+	FOREIGN KEY (turno_id) REFERENCES turno(id),
+	FOREIGN KEY (diasemana_id) REFERENCES diasSemana(id)
+);
+CREATE TABLE horas(
+	id int AUTO_INCREMENT primary key,
+	fechaYHoraEntrada datetime,
+	fechaYHoraSalida datetime,
+	empleado_id int,
+	foreign key (empleado_id) REFERENCES empleado(id)
+);
+CREATE TABLE horas_extra(
+	id int AUTO_INCREMENT primary key,
+	cantidad float,
+	horas_id int,
+	foreign key (horas_id) REFERENCES horas(id)
+);
+CREATE TABLE actividad(
+	id int AUTO_INCREMENT primary key,
+	tipoActividad varchar(100),
+	fechaYHoraComienzo datetime,
+	fechaYHoraFin datetime,
+	empleado_id int,
+	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
+);
+CREATE TABLE metrica(
+	id int AUTO_INCREMENT primary key,
+	tipo varchar(50)
+);
+CREATE TABLE inforMetrica( /* TABLA NUEVA */
+	id int AUTO_INCREMENT primary key,
+	actividad_id int,
+	metrica_id int,
+	FOREIGN KEY (actividad_id) REFERENCES actividad(id),
+	FOREIGN KEY (metrica_id) REFERENCES metrica(id)
+);
+CREATE TABLE alerta(
+	id int AUTO_INCREMENT primary key,
+	grado varchar(50),
+	incumplimiento varchar(100),
+	fechaYHora datetime,
+	empleado_id int,
+	FOREIGN KEY (empleado_id) REFERENCES empleado(id)
+);
+CREATE TABLE highlights( /* MODIFICADO */
+	id int AUTO_INCREMENT primary key,
+	minutoInicio time, /* NUEVO */
+	minutoFin time, /* NUEVO */
+	video_id int,
+	actividad_id int,
+	FOREIGN KEY (video_id) REFERENCES video(id),
+	FOREIGN KEY (actividad_id) REFERENCES actividad(id)
+);
+CREATE TABLE revision_alerta(
+	id int AUTO_INCREMENT primary key,
+	estadoRevision varchar(50),
+	comentarios varchar(200),
+	fechaYHoraRevision datetime,
+	usuario_id int,
+	alerta_id int,
+	FOREIGN KEY (usuario_id) REFERENCES usuario(id),
+	FOREIGN KEY (alerta_id) REFERENCES alerta(id)
+);
+CREATE TABLE mov_sospechoso(
+	id int AUTO_INCREMENT primary key,
+	minutoInicio time, /* NUEVO */
+	minutoFin time, /* NUEVO */
+	descripcionPersonaInvolucrada varchar(500),
+	boundingBox varchar(500), /* El cuadro con el que la IA detecta el movimiento. */
+	video_id int, /* NUEVO */
+	FOREIGN KEY (video_id) REFERENCES video(id) /* NUEVO */
+);
+
+CREATE TABLE auditoria(
+	id int AUTO_INCREMENT PRIMARY KEY,
+	accion varchar(50),
+	usuario_id int,
+	tablaM varchar(50),
+	registro_afectado_id int,
+	fecha datetime,
+	foreign key (usuario_id) references usuario(id)
+);
+
+	/*Triggers de inserts*/
+	CREATE TRIGGER trg_after_insert_rolEmpleado
+	AFTER INSERT ON rol_empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion,usuario_id,tablaM,registro_afectado_id,fecha)
+			VALUES ('INSERT',@current_user_id, 'rol_empleado', NEW.id,NOW());
+	END // 
+	
+	CREATE TRIGGER trg_after_insert_empleado
+	AFTER INSERT ON empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion,usuario_id,tablaM,registro_afectado_id,fecha)
+			VALUES ('INSERT',@current_user_id, 'empleado', NEW.id,NOW());
+	END // 
+
+	CREATE TRIGGER trg_after_insert_turno
+	AFTER INSERT ON turno
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'turno', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_horas
+	AFTER INSERT ON horas
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'horas', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_horasExtra
+	AFTER INSERT ON horas_extra
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'horas_extra', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_actividad
+	AFTER INSERT ON actividad
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'actividad', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_metrica
+	AFTER INSERT ON metrica
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'metrica', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_alerta
+	AFTER INSERT ON alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'alerta', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_camara
+	AFTER INSERT ON camara
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'camara', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_video
+	AFTER INSERT ON video
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'video', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_highlights
+	AFTER INSERT ON highlights
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'highlights', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_movSospechoso
+	AFTER INSERT ON mov_sospechoso
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'mov_sospechoso', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_revisionAlerta
+	AFTER INSERT ON revision_alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'revision_alerta', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_insert_usuario
+	AFTER INSERT ON usuario
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('INSERT', @current_user_id, 'usuario', NEW.id, NOW());
+	END //
+	
+	/*Triggers de update*/
+	CREATE TRIGGER trg_after_update_rolEmpleado
+	AFTER UPDATE ON rol_empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion,usuario_id,tablaM,registro_afectado_id,fecha)
+			VALUES ('UPDATE',@current_user_id, 'rol_empleado', NEW.id,NOW());
+	END // 
+	
+	CREATE TRIGGER trg_after_update_empleado
+	AFTER UPDATE ON empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'empleado', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_turno
+	AFTER UPDATE ON turno
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'turno', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_horas
+	AFTER UPDATE ON horas
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'horas', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_horasExtra
+	AFTER UPDATE ON horas_extra
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'horas_extra', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_actividad
+	AFTER UPDATE ON actividad
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'actividad', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_metrica
+	AFTER UPDATE ON metrica
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'metrica', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_alerta
+	AFTER UPDATE ON alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'alerta', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_camara
+	AFTER UPDATE ON camara
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'camara', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_video
+	AFTER UPDATE ON video
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'video', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_highlights
+	AFTER UPDATE ON highlights
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'highlights', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_movSospechoso
+	AFTER UPDATE ON mov_sospechoso
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'mov_sospechoso', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_revisionAlerta
+	AFTER UPDATE ON revision_alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'revision_alerta', NEW.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_update_usuario
+	AFTER UPDATE ON usuario
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('UPDATE', @current_user_id, 'usuario', NEW.id, NOW());
+	END //
+	
+	/*Triggers Delete*/
+	CREATE TRIGGER trg_after_delete_rolEmpleado
+	AFTER DELETE ON rol_empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion,usuario_id,tablaM,registro_afectado_id,fecha)
+			VALUES ('DELETE',@current_user_id, 'rol_empleado', OLD.id,NOW());
+	END // 
+
+	CREATE TRIGGER trg_after_delete_empleado
+	AFTER DELETE ON empleado
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'empleado', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_turno
+	AFTER DELETE ON turno
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'turno', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_horas
+	AFTER DELETE ON horas
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'horas', OLD.id, NOW());
+	END //
+
+
+	CREATE TRIGGER trg_after_delete_horasExtra
+	AFTER DELETE ON horas_extra
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'horas_extra', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_actividad
+	AFTER DELETE ON actividad
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'actividad', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_metrica
+	AFTER DELETE ON metrica
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'metrica', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_alerta
+	AFTER DELETE ON alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'alerta', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_camara
+	AFTER DELETE ON camara
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'camara', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_video
+	AFTER DELETE ON video
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'video', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_highlights
+	AFTER DELETE ON highlights
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'highlights', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_movSospechoso
+	AFTER DELETE ON mov_sospechoso
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'mov_sospechoso', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_revisionAlerta
+	AFTER DELETE ON revision_alerta
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'revision_alerta', OLD.id, NOW());
+	END //
+
+	CREATE TRIGGER trg_after_delete_usuario
+	AFTER DELETE ON usuario
+	FOR EACH ROW
+	BEGIN
+			INSERT INTO auditoria(accion, usuario_id, tablaM, registro_afectado_id, fecha)
+			VALUES ('DELETE', @current_user_id, 'usuario', OLD.id, NOW());
+	END //
+
+ DELIMITER ;
