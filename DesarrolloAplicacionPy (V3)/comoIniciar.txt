@@ -1,0 +1,16 @@
+PREPARAR TODO:
+PYTHON: 3.13
+
+python -m venv .venv
+
+CMD --> .venv\Scripts\activate
+
+LIMPIAR CACHE(Por las dudas)
+pip cache purge
+
+Instalar todo!
+pip install -r requirements.txt
+
+ESTO DEBERÍA CONVERTIRLO EN UN .EXE CUANDO SEA NECESARIO ↓↓↓(NO EJECUTAR DE MOMENTO)
+pyinstaller --noconfirm --onedir --windowed --name "ArgosIA" --add-data "frontend;frontend" --add-data "backend;backend" main.py
+

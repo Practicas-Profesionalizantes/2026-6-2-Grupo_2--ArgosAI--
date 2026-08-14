@@ -315,7 +315,37 @@ def verificar_credenciales():
 
 
 # ============================================================
-# PANTALLA DE LOGIN
+# LOGICA ASÍNCRONA DE AUTENTICACIÓN CONTROLADA
+# ============================================================
+async def procesar_login_async(email_usuario, password_usuario):
+    """
+    Se ejecuta de forma asíncrona dentro de asyncio.run()
+    Garantiza que libsql-client inicialice su sesión con un loop activo.
+    """
+    # Levantamos el cliente de Turso DENTRO del entorno asíncrono
+    client = api.obtener_cliente_turso()
+    try:
+        query_login = "SELECT id, nombre, contrasenia FROM usuario WHERE email = ?;"
+        resultado_db = await client.execute(query_login, [email_usuario])
+        
+        if resultado_db.rows:
+            user_id = resultado_db.rows[0][0]
+            user_nombre = resultado_db.rows[0][1]
+            clave_db = resultado_db.rows[0][2]
+            
+            # Verificación directa en texto plano (Sin Hasheo)
+            if str(password_usuario).strip() == str(clave_db).strip():
+                return {"valido": True, "id": user_id, "nombre": user_nombre}
+        return {"valido": False}
+    except Exception as e:
+        print(f"[Turso Login Error]: {e}")
+        return {"valido": False, "error": str(e)}
+    finally:
+        await client.close()  # Cierre asíncrono mandatorio de socket
+
+
+# ============================================================
+# PANTALLA DE LOGIN CONECTADA A TURSO CLOUD (TEXTO PLANO)
 # ============================================================
 if not st.session_state.autenticado:
     st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
@@ -325,24 +355,42 @@ if not st.session_state.autenticado:
         <div class="login-card">
             <div class="login-logo">🔒</div>
             <div class="login-title">ArgosIA</div>
-            <div class="login-sub">Sistema de Monitoreo Inteligente<br>Identificación obligatoria de operador</div>
+            <div class="login-sub">Sistema de Monitoreo Inteligente Remoto<br>Identificación obligatoria de operador</div>
         </div>""", unsafe_allow_html=True)
 
         with st.container():
-            usuario = st.text_input("Usuario", key="usuario_input", placeholder="Ingrese su usuario")
-            clave   = st.text_input("Contraseña", type="password", key="clave_input", placeholder="••••••••")
+            usuario_mail = st.text_input("Correo Electrónico", key="usuario_input", placeholder="pablo@argosai.com")
+            clave_plana = st.text_input("Contraseña", type="password", key="clave_input", placeholder="••••••••")
 
             if getattr(st.session_state, "_login_error", False):
-                st.error("Usuario o contraseña incorrectos.")
+                st.error("Correo electrónico o contraseña incorrectos.")
                 st.session_state._login_error = False
 
-            st.button("Iniciar Sesión", on_click=verificar_credenciales,
-                      use_container_width=True, type="primary")
+            if st.button("Iniciar Sesión", use_container_width=True, type="primary"):
+                if not usuario_mail or not clave_plana:
+                    st.warning("Por favor, completa ambos campos.")
+                else:
+                    # 🟢 SOLUCIÓN: Ejecutamos todo el circuito de red encapsulado dentro del loop
+                    login_res = asyncio.run(procesar_login_async(usuario_mail.strip(), clave_plana.strip()))
+                    
+                    if login_res.get("valido"):
+                        st.session_state.autenticado = True
+                        st.session_state.user_nombre = login_res["nombre"]
+                        st.session_state.user_id = login_res["id"]  # Setea el ID para las auditorías de SPs.py
+                        st.success(f"¡Acceso Concedido! Bienvenido, {login_res['nombre']}.")
+                        st.rerun()
+                    else:
+                        if "error" in login_res:
+                            st.error(f"Fallo crítico de comunicación con la nube: {login_res['error']}")
+                        else:
+                            st.session_state._login_error = True
+                            st.rerun()
 
             st.caption("El registro de nuevos operadores está sujeto a políticas de administración.")
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
+
 
 
 # ============================================================
