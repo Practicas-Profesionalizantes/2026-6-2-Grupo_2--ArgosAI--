@@ -1,0 +1,668 @@
+from datetime import date, datetime, time
+import mysql.connector
+from mysql.connector import Error
+
+
+# ==========================================
+# MÓDULO DE USUARIOS Y CÁMARAS
+# ==========================================
+
+
+def crear_usuario(
+    connection,
+    nombre: str,
+    email: str,
+    contrasenia: str,
+    telefono: str,
+) -> str:
+    """Crear Usuario (cu)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO usuario(nombre, email, contrasenia, telefono) VALUES (%s, %s, %s, %s)"
+        cursor.execute(query, (nombre, email, contrasenia, telefono))
+        connection.commit()
+        return "Usuario creado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_camara(
+    connection, ubicacion: str, estado: str, direccionIP: str
+) -> str:
+    """Guardar Cámara (gc)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO camara(ubicacion, estado, direccionIP) VALUES (%s, %s, %s)"
+        cursor.execute(query, (ubicacion, estado, direccionIP))
+        connection.commit()
+        return "Cámara guardada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def ver_todas_camaras(connection) -> tuple[list, str]:
+    """Ver todas las cámaras (vtc)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM camara")
+        resultado = cursor.fetchall()
+        return resultado, "Mostrando cámaras.."
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def ver_datos_camara(connection, id_camara: int) -> tuple[list, str]:
+    """Ver datos de una cámara (vdc)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM camara WHERE id = %s", (id_camara,))
+        resultado = cursor.fetchall()
+        return (
+            resultado,
+            f"Mostrando datos de la cámara con el id .{id_camara}",
+        )
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_camara(connection, id_camara: int) -> str:
+    """Borrar Cámara (bc)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM camara WHERE id = %s", (id_camara,))
+        connection.commit()
+        return "Cámara borrada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def modificar_camara(
+    connection,
+    id_camara: int,
+    ubicacion: str,
+    estado: str,
+    direccionIP: str,
+) -> str:
+    """Modificar Cámara (mc)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "UPDATE camara SET ubicacion = %s, estado = %s, direccionIP = %s WHERE id = %s"
+        cursor.execute(query, (ubicacion, estado, direccionIP, id_camara))
+        connection.commit()
+        return "Cámara modificada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+# ==========================================
+# MÓDULO DE VIDEOS Y HIGHLIGHTS
+# ==========================================
+
+
+def guardar_video(
+    connection,
+    ruta: str,
+    fecha: date,
+    duracion: time,
+    tamanoArchivo: float,
+    tiempoLimite: date,
+    camara_id: int,
+) -> str:
+    """Guardar Video (gv)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO video(ruta, fecha, duracion, tamanoArchivo, tiempoLimite, camara_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(
+            query,
+            (ruta, fecha, duracion, tamanoArchivo, tiempoLimite, camara_id),
+        )
+        connection.commit()
+        return "Video guardado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def mostrar_videos(connection) -> tuple[list, str]:
+    """Mostrar Videos (mv)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM video")
+        resultado = cursor.fetchall()
+        return resultado, "Mostrando videos..."
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_video(connection, id_video: int) -> str:
+    """Borrar Video (bv)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM video WHERE id = %s", (id_video,))
+        connection.commit()
+        return "Video borrado con éxito"
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_highlight(
+    connection,
+    minutoInicio: time,
+    minutoFin: time,
+    id_video: int,
+    id_actividad: int,
+) -> str:
+    """Guardar Highlight (ghi)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO highlights(minutoInicio, minutoFin, video_id, actividad_id) VALUES (%s, %s, %s, %s)"
+        cursor.execute(
+            query, (minutoInicio, minutoFin, id_video, id_actividad)
+        )
+        connection.commit()
+        return "Highlight guardado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_highlight(connection, id_highlight: int) -> str:
+    """Borrar Highlight (bhi)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM highlights WHERE id = %s", (id_highlight,))
+        connection.commit()
+        return "Highlight guardado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+# ==========================================
+# MÓDULO DE EMPLEADOS Y TURNOS
+# ==========================================
+
+
+def crear_empleado(
+    connection,
+    nombre: str,
+    genero: str,
+    rendimiento: float,
+    estado: str,
+    urlImagen: str,
+    id_rol: int,
+) -> str:
+    """Crear Empleado (ce)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO empleado(nombre, genero, rendimiento, estado, urlImagen, rol_id) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(
+            query, (nombre, genero, rendimiento, estado, urlImagen, id_rol)
+        )
+        connection.commit()
+        return "Empleado guardado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_empleado(connection, id_empleado: int) -> str:
+    """Borrar Empleado (be)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM empleado WHERE id = %s", (id_empleado,))
+        connection.commit()
+        return "Empleado borrado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def modificar_empleado(
+    connection,
+    id_empleado: int,
+    nombre: str,
+    genero: str,
+    rendimiento: float,
+    estado: str,
+    urlImagen: str,
+    id_rol: int,
+) -> str:
+    """Modificar Empleado (me)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "UPDATE empleado SET nombre = %s, genero = %s, rendimiento = %s, estado = %s, urlImagen = %s, rol_id = %s WHERE id = %s"
+        cursor.execute(
+            query,
+            (
+                nombre,
+                genero,
+                rendimiento,
+                estado,
+                urlImagen,
+                id_rol,
+                id_empleado,
+            ),
+        )
+        connection.commit()
+        return "Datos del empleado actualizados con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def crear_turno(
+    connection, horaInicio: time, horaFin: time, id_empleado: int
+) -> str:
+    """Crear Turno (ct)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = (
+            "INSERT INTO turno(HoraInicio, HoraFin, empleado_id) VALUES (%s, %s, %s)"
+        )
+        cursor.execute(query, (horaInicio, horaFin, id_empleado))
+        connection.commit()
+        return "Turno del empleado asignado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_dias_turno(
+    connection, id_turno: int, id_diaSemana: int
+) -> str:
+    """Guardar Días de un Turno (gdt)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO diasTurno(turno_id, diaSemana_id) VALUES (%s, %s)"
+        cursor.execute(query, (id_turno, id_diaSemana))
+        connection.commit()
+        return "Diás de turnos del empleado asignado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_turno(connection, id_turno: int) -> str:
+    """Borrar Turno (bt)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM turno WHERE id = %s", (id_turno,))
+        connection.commit()
+        return "Turno del empleado eliminado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def mostrar_turnos(connection) -> tuple[list, str]:
+    """Mostrar Turnos (mt)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM turno")
+        resultado = cursor.fetchall()
+        return resultado, "Mostrando todos los turnos..."
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def mostrar_turnos_empleado(connection, id_empleado: int) -> tuple[list, str]:
+    """Mostrar Turnos de Empleado (mte)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT * FROM turno WHERE empleado_id = %s", (id_empleado,)
+        )
+        resultado = cursor.fetchall()
+        return (
+            resultado,
+            "Mostrando todos los turnos del empleado seleccionado...",
+        )
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+# ==========================================
+# MÓDULO DE HORAS Y ACTIVIDADES
+# ==========================================
+
+
+def guardar_horas(
+    connection,
+    fechaYHoraEntrada: datetime,
+    fechaYHoraSalida: datetime,
+    id_empleado: int,
+) -> str:
+    """Guardar Horas (gh)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO horas(fechaYHoraEntrada, fechaYHoraSalida, empleado_id) VALUES (%s, %s, %s)"
+        cursor.execute(
+            query, (fechaYHoraEntrada, fechaYHoraSalida, id_empleado)
+        )
+        connection.commit()
+        return "Horas guardadas con éxito"
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def ver_horas_empleado_fecha(
+    connection, id_empleado: int, fecha: date
+) -> tuple[list, str]:
+    """Ver Horas de un Empleado en una Fecha (vhef)"""
+    cursor = connection.cursor(dictionary=True)
+    try:
+        query = "SELECT * FROM horas WHERE empleado_id = %s AND DATE(fechaYHoraEntrada) = %s"
+        cursor.execute(query, (id_empleado, fecha))
+        resultado = cursor.fetchall()
+        return (
+            resultado,
+            "Mostrando las horas del empleado seleccionado en el día seleccionado...",
+        )
+    except Error:
+        return [], "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_horas_extra(connection, cantidad: float, id_horas: int) -> str:
+    """Guardar Horas Extra (ghe)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = (
+            "INSERT INTO horas_extra(cantidad, horas_id) VALUES (%s, %s)"
+        )
+        cursor.execute(query, (cantidad, id_horas))
+        connection.commit()
+        return "Horas extra guardadas con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_actividad(
+    connection,
+    tipoActividad: str,
+    fechaYHoraComienzo: datetime,
+    fechaYHoraFin: datetime,
+    id_empleado: int,
+) -> str:
+    """Guardar Actividad (ga)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO actividad(tipoActividad, fechaYHoraComienzo, fechaYHoraFin, empleado_id) VALUES (%s, %s, %s, %s)"
+        cursor.execute(
+            query,
+            (tipoActividad, fechaYHoraComienzo, fechaYHoraFin, id_empleado),
+        )
+        connection.commit()
+        return "Actividad guardada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_actividad(connection, id_actividad: int) -> str:
+    """Borrar Actividad (ba)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM actividad WHERE id = %s", (id_actividad,))
+        connection.commit()
+        return "Actividad Borrada."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+# ==========================================
+# MÓDULO DE MÉTRICAS Y ALERTAS
+# ==========================================
+
+
+def crear_metrica(connection, tipo: str) -> str:
+    """Crear Métrica (cm)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO metrica(tipo) VALUES (%s)"
+        cursor.execute(query, (tipo,))
+        connection.commit()
+        return "Metrica guardada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def cargar_datos_metrica(
+    connection, id_actividad: int, id_metrica: int
+) -> str:
+    """Cargar Datos de una Métrica (cdm)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = (
+            "INSERT INTO inforMetrica(actividad_id, metrica_id) VALUES (%s, %s)"
+        )
+        cursor.execute(query, (id_actividad, id_metrica))
+        connection.commit()
+        return "Dato añadido a la métrica con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def guardar_alerta(
+    connection,
+    grado: str,
+    incumplimiento: str,
+    fechaYHora: datetime,
+    id_empleado: int,
+) -> str:
+    """Guardar Alerta (gal)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO alerta(grado, incumplimiento, fechaYHora, empleado_id) VALUES (%s, %s, %s, %s)"
+        cursor.execute(
+            query, (grado, incumplimiento, fechaYHora, id_empleado)
+        )
+        connection.commit()
+        return "Alerta guardada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_alerta(connection, id_alerta: int) -> str:
+    """Borrar Alerta (bal)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute("DELETE FROM alerta WHERE id = %s", (id_alerta,))
+        connection.commit()
+        return "Alerta guardada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def crear_revision_alerta(
+    connection,
+    estadoRevision: str,
+    comentarios: str,
+    fechaYHoraRevision: datetime,
+    id_usuario: int,
+    id_alerta: int,
+) -> str:
+    """Crear una Revisión de Alerta (cra)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO revision_alerta(estadoRevision, comentarios, fechaYHoraRevision, usuario_id, alerta_id) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(
+            query,
+            (
+                estadoRevision,
+                comentarios,
+                fechaYHoraRevision,
+                id_usuario,
+                id_alerta,
+            ),
+        )
+        connection.commit()
+        return "Revisión de alerta creada con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def modificar_estado_revision_alerta(
+    connection, id_revision: int, estadoRevision: str
+) -> str:
+    """Modificar el Estado de una Revisión de Alerta (mera)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "UPDATE revision_alerta SET estadoRevision = %s WHERE id = %s"
+        cursor.execute(query, (estadoRevision, id_revision))
+        connection.commit()
+        return "Estado de la revisión modificado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+# ==========================================
+# MÓDULO DE MOVIMIENTOS SOSPECHOSOS
+# ==========================================
+
+
+def guardar_movimiento_sospechoso(
+    connection,
+    minutoInicio: time,
+    minutoFin: time,
+    descripcionPersonaInvolucrada: str,
+    boundingBox: str,
+    id_video: int,
+) -> str:
+    """Guardar un movimiento sospechoso (gms)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        query = "INSERT INTO mov_sospechoso(minutoInicio, minutoFin, descripcionPersonaInvolucrada, boundingBox, video_id) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(
+            query,
+            (
+                minutoInicio,
+                minutoFin,
+                descripcionPersonaInvolucrada,
+                boundingBox,
+                id_video,
+            ),
+        )
+        connection.commit()
+        return "Movimiento sospechoso registrado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
+
+
+def borrar_movimiento_sospechoso(connection, id_movimiento: int) -> str:
+    """Borrar un movimiento sospechoso (bms)"""
+    cursor = connection.cursor()
+    try:
+        connection.start_transaction()
+        cursor.execute(
+            "DELETE FROM mov_sospechoso WHERE id = %s", (id_movimiento,)
+        )
+        connection.commit()
+        return "Movimiento sospechoso registrado con éxito."
+    except Error:
+        connection.rollback()
+        return "Ocurrio un error."
+    finally:
+        cursor.close()
