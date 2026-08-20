@@ -1,20 +1,52 @@
+import os
+import sys
+import logging
+from pathlib import Path
 import libsql_client
 
-# ============================================================
-# CREDENCIALES REALES DE PRODUCCIÓN — MOTOR DE LIMPIEZA AUTOMÁTICO
-# ============================================================
+# Configuración estricta del Pilar de Registros (Logging)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
-URL_RAW = "libsql://basededatoshost-marto.aws-us-west-2.turso.io"
-TURSO_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODY3MzcxNDIsImlkIjoiMDFhMDAxMzgtY2MwMS03MzY1LTliOGItODdjNDIwYTgxMGQ5Iiwia2lkIjoiT2p5NDA0bWZXNFNjenpLcnpERThNOEFRVVE5MW9jQ0pHRnZXeEN3czZqWSIsInJpZCI6ImMzMDc4Y2JkLTBkNTYtNGJhNS05MTE0LWIwNjQ4YjU4Yzg3NCJ9.YZieaBW-wZQeAAY-hMsf7FPXBuxl4rbpzOFiEzgnJPpJrc9bw7iOJs2qvbKDWnJk_mGg3V61xQyFJVluCBd7DQ"
+# 🟢 PILAR SEGURIDAD: Carga defensiva de variables de entorno desde el archivo .env
+# Intentamos leer de forma directa; si no existen, buscamos leerlas de forma manual
+TURSO_URL_RAW = os.getenv("TURSO_DATABASE_URL")
+TURSO_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
-# El limpiador matemático: remueve prefijos y garantiza que el host quede intacto
-HOST_LIMPIO = URL_RAW.replace("libsql://", "").replace("https://", "").replace("http://", "").strip()
+# Si las variables no están cargadas en el sistema operativo, leemos el archivo .env a mano
+if not TURSO_URL_RAW or not TURSO_TOKEN:
+    ruta_env = Path(__file__).resolve().parent.parent / ".env"
+    if ruta_env.exists():
+        with open(ruta_env, "r") as f:
+            for linea in f:
+                if "=" in linea and not linea.startswith("#"):
+                    clave, valor = linea.strip().split("=", 1)
+                    if clave == "TURSO_DATABASE_URL":
+                        TURSO_URL_RAW = valor
+                    elif clave == "TURSO_AUTH_TOKEN":
+                        TURSO_TOKEN = valor
 
-# Construimos la URL en formato HTTPS nativo robusto para AWS
+# Validación crítica de secretos antes de iniciar sockets
+if not TURSO_URL_RAW or not TURSO_TOKEN:
+    logging.critical("Falta configuración crítica en el entorno. No se encontraron las variables de Turso.")
+    sys.exit("❌ Error: Configure las credenciales de Turso en su entorno o archivo .env")
+
+# 🟢 SANEAMIENTO MATEMÁTICO AUTOMÁTICO DE URL
+# Remueve de forma transparente cualquier prefijo redundante para evitar el recorte del subdominio de AWS
+HOST_LIMPIO = TURSO_URL_RAW.replace("libsql://", "").replace("https://", "").replace("http://", "").strip()
 TURSO_URL = f"https://{HOST_LIMPIO}"
 
 def obtener_cliente_turso():
     """
     Retorna el cliente HTTP oficial seguro e independiente de Turso Cloud.
+    Aplica el Pilar de Manejo de Errores capturando fallas de inicialización.
     """
-    return libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
+    # 🟢 PILAR MANEJO DE ERRORES: Control estricto de instanciación
+    try:
+        return libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
+    except Exception as e_init:
+        logging.error(f"Fallo crítico al instanciar el cliente HTTP de Turso Cloud: {e_init}")
+        raise e_init

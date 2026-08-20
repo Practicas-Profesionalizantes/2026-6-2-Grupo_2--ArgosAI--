@@ -1,57 +1,74 @@
-import pymysql
+import sys
 import os
+import logging
+import asyncio
+from pathlib import Path
 
-# CONFIGURACIÓN (Ajusta la contraseña si usas)
-DB_HOST = "localhost"
-DB_USER = "root"
-DB_PASSWORD = "" 
+# ============================================================
+# INYECTOR DE RUTAS DINÁMICO
+# ============================================================
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
 
-# Ruta automática hacia la carpeta models y tu archivo
-# !!! CAMBIA 'base_de_datos.sql' por el nombre REAL de tu archivo !!!
-RUTA_SQL = os.path.join("models", "DB ArgosAi (1).sql") 
+from backend.db_config import obtener_cliente_turso
 
-def importar_script_sql():
-    if not os.path.exists(RUTA_SQL):
-        print("[-] No encontré el archivo en: {0}".format(RUTA_SQL))
-        print("⚠️ Asegúrate de haber copiado el archivo dentro de la carpeta 'models' y que el nombre coincida.")
+# Configuración estricta del Pilar de Registros (Logging)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+# Buscamos el archivo de respaldo de estructura dentro de backend/models/
+# 🟢 MEJORA: Definimos una ruta limpia y flexible que busca el archivo .sql
+MODEL_DIR = Path(__file__).resolve().parent / "models"
+SQL_FILE_PATH = MODEL_DIR / "schema.sql"  # <-- Te sugiero renombrar tu archivo a 'schema.sql'
+
+# Si aún conserva el nombre anterior, usamos este respaldo de compatibilidad
+if not SQL_FILE_PATH.exists():
+    SQL_FILE_PATH = MODEL_DIR / "DB ArgosAi (1).sql"
+
+async def inicializar_estructura_base_datos():
+    logging.info("Iniciando el proceso de construcción de tablas en Turso Cloud...")
+    
+    if not SQL_FILE_PATH.exists():
+        logging.critical(f"No se encontró el archivo de estructura SQL en la ruta: {SQL_FILE_PATH}")
+        sys.exit("❌ Error: Falta el archivo de respaldo estructural .sql para iniciar.")
+        
+    logging.info(f"Leyendo archivo de esquema relacional: {SQL_FILE_PATH.name}")
+    with open(SQL_FILE_PATH, "r", encoding="utf-8") as f:
+        contenido_sql = f.read()
+
+    # Dividimos el archivo por puntos y comas para limpiar comandos individuales
+    # Filtramos líneas vacías o comentarios de SQL corporativos
+    comandos_crudos = contenido_sql.split(";")
+    lote_comandos = []
+    
+    for comando in comandos_crudos:
+        limpio = comando.strip()
+        if limpio and not limpio.startswith("--") and not limpio.startswith("/*"):
+            lote_comandos.append(limpio)
+
+    if not lote_comandos:
+        logging.warning("El archivo SQL no contiene comandos válidos para ejecutar.")
         return
 
+    client = obtener_cliente_turso()
     try:
-        # Conectar al servidor de MySQL
-        conexion = pymysql.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            autocommit=True
-        )
-        cursor = conexion.cursor()
-        print("[+] Conectado a MySQL.")
+        logging.info(f"Enviando lote atómico de {len(lote_comandos)} sentencias relacionales (Garantizando ACID)...")
         
-        # Leer el archivo .sql entero
-        print("[*] Leyendo el archivo SQL de la carpeta models...")
-        with open(RUTA_SQL, "r", encoding="utf-8") as f:
-            sql_entero = f.read()
+        # 🟢 PILAR TRANSACCIONES ACID: Inyección en bloque masivo
+        # Turso aplica el lote completo de forma atómica; si una clave foránea o tabla falla, revierte todo
+        await client.batch(lote_comandos)
+        logging.info("¡Estructura relacional e integridad de tablas creadas con éxito total en la nube!")
         
-        # MySQL no permite ejecutar múltiples comandos juntos fácilmente con execute() 
-        # si contienen DELIMITER (común en triggers/procedures). Por eso separamos por comandos:
-        comandos = sql_entero.split(";")
-        
-        print("[*] Inyectando base de datos...")
-        for comando in comandos:
-            comando_limpio = comando.strip()
-            if comando_limpio: # Si el comando no está vacío
-                try:
-                    cursor.execute(comando_limpio)
-                except Exception as e_sql:
-                    # Ignoramos advertencias menores, pero si hay error crítico lo avisa
-                    pass
-                    
-        print("[===] ¡Tu archivo SQL se ha cargado con éxito en MySQL desde la carpeta models! [===]")
-        cursor.close()
-        conexion.close()
-
-    except Exception as e:
-        print("[-] Error general al importar: {0}".format(e))
+    except Exception as e_sql:
+        # 🟢 PILAR MANEJO DE ERRORES: Captura explícita, fin al silenciamiento de excepciones
+        logging.error(f"Fallo crítico al inyectar el esquema relacional. Operación abortada (ROLLBACK): {e_sql}")
+        logging.error("Revise la sintaxis de sus sentencias SQL o la compatibilidad de tipos con libSQL.")
+    finally:
+        await client.close()
 
 if __name__ == "__main__":
-    importar_script_sql()
+    asyncio.run(inicializar_estructura_base_datos())

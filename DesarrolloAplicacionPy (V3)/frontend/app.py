@@ -315,14 +315,18 @@ def verificar_credenciales():
 
 
 # ============================================================
-# LOGICA ASÍNCRONA DE AUTENTICACIÓN CONTROLADA
+# LOGICA ASÍNCRONA DE AUTENTICACIÓN CON HASHEO (SHA-256)
 # ============================================================
 async def procesar_login_async(email_usuario, password_usuario):
     """
-    Se ejecuta de forma asíncrona dentro de asyncio.run()
-    Garantiza que libsql-client inicialice su sesión con un loop activo.
+    Se ejecuta de forma asíncrona. Hashea la clave ingresada
+    y la compara con la firma criptográfica guardada en Turso.
     """
-    # Levantamos el cliente de Turso DENTRO del entorno asíncrono
+    import hashlib  # Librería nativa para triturar la contraseña
+    
+    # 1. Calculamos el hash de la clave ingresada eliminando espacios invisibles
+    hash_clave_ingresada = hashlib.sha256(str(password_usuario).strip().encode('utf-8')).hexdigest()
+    
     client = api.obtener_cliente_turso()
     try:
         query_login = "SELECT id, nombre, contrasenia FROM usuario WHERE email = ?;"
@@ -331,21 +335,22 @@ async def procesar_login_async(email_usuario, password_usuario):
         if resultado_db.rows:
             user_id = resultado_db.rows[0][0]
             user_nombre = resultado_db.rows[0][1]
-            clave_db = resultado_db.rows[0][2]
+            hash_db = str(resultado_db.rows[0][2]).strip()  # Hash guardado en Turso
             
-            # Verificación directa en texto plano (Sin Hasheo)
-            if str(password_usuario).strip() == str(clave_db).strip():
+            # 2. COMPARACIÓN CRIPTOGRÁFICA (Ambos ya son hashes SHA-256)
+            if hash_clave_ingresada == hash_db:
                 return {"valido": True, "id": user_id, "nombre": user_nombre}
+                
         return {"valido": False}
     except Exception as e:
         print(f"[Turso Login Error]: {e}")
         return {"valido": False, "error": str(e)}
     finally:
-        await client.close()  # Cierre asíncrono mandatorio de socket
+        await client.close()
 
 
 # ============================================================
-# PANTALLA DE LOGIN CONECTADA A TURSO CLOUD (TEXTO PLANO)
+# PANTALLA DE LOGIN CONECTADA A TURSO CLOUD
 # ============================================================
 if not st.session_state.autenticado:
     st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
@@ -370,13 +375,13 @@ if not st.session_state.autenticado:
                 if not usuario_mail or not clave_plana:
                     st.warning("Por favor, completa ambos campos.")
                 else:
-                    # 🟢 SOLUCIÓN: Ejecutamos todo el circuito de red encapsulado dentro del loop
+                    # Ejecutamos el flujo asíncrono pasándole los datos limpios
                     login_res = asyncio.run(procesar_login_async(usuario_mail.strip(), clave_plana.strip()))
                     
                     if login_res.get("valido"):
                         st.session_state.autenticado = True
                         st.session_state.user_nombre = login_res["nombre"]
-                        st.session_state.user_id = login_res["id"]  # Setea el ID para las auditorías de SPs.py
+                        st.session_state.user_id = login_res["id"]
                         st.success(f"¡Acceso Concedido! Bienvenido, {login_res['nombre']}.")
                         st.rerun()
                     else:
@@ -680,7 +685,7 @@ elif menu == "🛡️ Seguridad":
             with col_im:
                 st.markdown(f"""
                 <div class="argos-card" style="margin-top:0;">
-                    <b>Operador Actual:</b> Martín Romero<br>
+                    <b>Operador Actual:</b> {st.session_state.get('user_nombre', 'N/A')}<br>
                     <b>Gravedad:</b> {badge(al_data['grado'], grav_tipo)}<br>
                     <b>Fecha:</b> {al_data['fechaYHora']}
                 </div>
@@ -735,10 +740,9 @@ elif menu == "👤 Mi Perfil":
 
     _, col_p, _ = st.columns([1, 1.4, 1])
     with col_p:
-        try:
-            username = st.secrets["credentials"]["username"]
-        except (KeyError, FileNotFoundError):
-            username = "admin"
+        # Leemos la identidad real del operador validado en Turso Cloud
+        username = st.session_state.get("user_nombre", "Operador")
+
 
         st.markdown("""
         <div class="profile-card">
@@ -791,15 +795,17 @@ div[data-testid="stMainBlockContainer"] > div > div[data-testid="stVerticalBlock
 </style>
 """, unsafe_allow_html=True)
 
-_nav_cols = st.columns(len(MENU_ITEMS))
-for _i, (_icon, _label) in enumerate(MENU_ITEMS):
-    _full = f"{_icon} {_label}"
-    with _nav_cols[_i]:
-        if st.button(
-            _full,
-            key=f"nav_{_label}",
-            use_container_width=True,
-            type="primary" if menu == _full else "secondary",
-        ):
-            st.session_state.menu_actual = _full
-            st.rerun()
+# Encapsulamos en un contenedor seguro para blindar el aislamiento estructural del CSS
+with st.container(key="contenedor_navegacion_oculta"):
+    _nav_cols = st.columns(len(MENU_ITEMS))
+    for _i, (_icon, _label) in enumerate(MENU_ITEMS):
+        _full = f"{_icon} {_label}"
+        with _nav_cols[_i]:
+            if st.button(
+                _full,
+                key=f"nav_{_label}",
+                width='stretch',  # <-- Reemplazause_container_width por esto
+                type="primary" if menu == _full else "secondary",
+            ):
+                st.session_state.menu_actual = _full
+                st.rerun()
