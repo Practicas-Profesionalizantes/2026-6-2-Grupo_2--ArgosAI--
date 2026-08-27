@@ -1,6 +1,5 @@
 # ArgosIA
 
-
 # Descripción del Proyecto
    
 ArgosIA es un sistema inteligente de monitoreo y optimización de productividad para heladerías basado en Edge AI (Inteligencia Artificial en el Borde). El sistema utiliza una cámara conectada a un hardware embebido (Orbitty carrier) que ejecuta localmente un modelo de visión artificial (YOLOv5) para verificar en tiempo real si el empleado está realizando sus tareas mediante el registro de movimientos clave.
@@ -47,8 +46,11 @@ Agradecimientos especiales a la comunidad y colaboradores externos que apoyaron 
 
 # Personas Desarrolladoras del Proyecto
    
-martocipayo
-thiago280922
+Martin Lopez Schillaci 
+Rosendo Osores
+Martin Romero Caqui
+Gaston Amaya
+Thiago Casiano
 
 7. Licencia
 Este proyecto se encuentra bajo la licencia MIT. Siéntase libre de utilizar, modificar y adaptar el código según las necesidades del negocio.
