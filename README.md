@@ -46,11 +46,11 @@ Agradecimientos especiales a la comunidad y colaboradores externos que apoyaron 
 
 # Personas Desarrolladoras del Proyecto
    
-Martin Lopez Schillaci 
-Rosendo Osores
-Martin Romero Caqui
-Gaston Amaya
-Thiago Casiano
+Martin Lopez Schillaci.
+Rosendo Osores.
+Martin Romero Caqui.
+Gaston Amaya.
+Thiago Casiano.
 
 7. Licencia
 Este proyecto se encuentra bajo la licencia MIT. Siéntase libre de utilizar, modificar y adaptar el código según las necesidades del negocio.
