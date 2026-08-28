@@ -162,13 +162,10 @@ st.markdown("""
 .footer-nav a.active  { color: var(--accent); border-color: var(--border); background: var(--bg-card); }
 .footer-nav a .icon   { font-size: 1.2rem; }
 
-/* ── Pantalla de login ── */
-.login-wrapper {
-    min-height: 85vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+/* ── Pantalla de login ──
+   (se quitó el wrapper con min-height:85vh: en Streamlit ese div
+   no envuelve realmente los widgets nativos que vienen después,
+   así que solo generaba un bloque vacío enorme y forzaba scroll) */
 .login-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -176,6 +173,7 @@ st.markdown("""
     padding: 2.5rem 2rem;
     width: 100%;
     max-width: 420px;
+    margin: 6vh auto 0 auto;
 }
 .login-logo {
     font-size: 2.5rem;
@@ -253,15 +251,23 @@ DEFAULTS = {
     "menu_actual": "📺 Monitoreo",
     "usuario_input": "",
     "clave_input": "",
-    # Datos en memoria (en producción vendría de BD)
+    # Catálogo de puestos — tabla rol_empleado(id, nombreRol, descripcion)
+    "roles": [
+        {"id": 1, "nombreRol": "Cajero",            "descripcion": "Atención en caja y cobro a clientes."},
+        {"id": 2, "nombreRol": "Barista",            "descripcion": "Preparación de bebidas y atención de barra."},
+        {"id": 3, "nombreRol": "Personal de Cocina", "descripcion": "Preparación y despacho de alimentos."},
+        {"id": 4, "nombreRol": "Encargado",          "descripcion": "Supervisión general del turno y del personal."},
+        {"id": 5, "nombreRol": "Seguridad",          "descripcion": "Control de accesos y vigilancia del local."},
+    ],
+    # Empleados — tabla empleado(id, nombre, genero, rendimiento, estado, urlImagen, rol_id)
     "empleados": [
-        {"legajo": "EMP001", "nombre": "Juan Pérez",    "rol": "Barista",             "turno": "Mañana",  "activo": True},
-        {"legajo": "EMP002", "nombre": "María Gómez",   "rol": "Cajero",              "turno": "Tarde",   "activo": True},
-        {"legajo": "EMP003", "nombre": "Carlos López",  "rol": "Personal de Cocina",  "turno": "Mañana",  "activo": True},
+        {"id": 1, "nombre": "Juan Pérez",   "genero": "Masculino", "rendimiento": 92.0, "estado": "Activo", "urlImagen": "", "rol_id": 2},
+        {"id": 2, "nombre": "María Gómez",  "genero": "Femenino",  "rendimiento": 97.0, "estado": "Activo", "urlImagen": "", "rol_id": 1},
+        {"id": 3, "nombre": "Carlos López", "genero": "Masculino", "rendimiento": 88.0, "estado": "Activo", "urlImagen": "", "rol_id": 3},
     ],
     "turnos": [
-        {"legajo": "EMP001", "nombre": "Juan Pérez",   "entrada": "08:00", "salida": "16:00", "fecha": "2026-06-18", "horas": 8},
-        {"legajo": "EMP002", "nombre": "María Gómez",  "entrada": "14:00", "salida": "22:00", "fecha": "2026-06-18", "horas": 8},
+        {"empleado_id": 1, "nombre": "Juan Pérez",  "entrada": "08:00", "salida": "16:00", "fecha": "2026-06-18", "horas": 8},
+        {"empleado_id": 2, "nombre": "María Gómez", "entrada": "14:00", "salida": "22:00", "fecha": "2026-06-18", "horas": 8},
     ],
     "incidentes_seg": [
         {"hora": "14:32:10", "camara": "Cam 01", "descripcion": "Ingreso no autorizado a zona restringida", "gravedad": "Alta"},
@@ -297,6 +303,19 @@ def kpi(value, label):
     return f'<div class="kpi-box"><div class="kpi-value">{value}</div><div class="kpi-label">{label}</div></div>'
 
 
+def get_rol_nombre(rol_id):
+    """Busca el nombreRol correspondiente a un rol_id (FK a rol_empleado)."""
+    for r in st.session_state.roles:
+        if r["id"] == rol_id:
+            return r["nombreRol"]
+    return "—"
+
+
+def next_id(lista):
+    """Simula el AUTOINCREMENT de la base de datos para nuevos registros."""
+    return max([x["id"] for x in lista], default=0) + 1
+
+
 def verificar_credenciales():
     try:
         u = st.secrets["credentials"]["username"]
@@ -316,7 +335,6 @@ def verificar_credenciales():
 # PANTALLA DE LOGIN
 # ============================================================
 if not st.session_state.autenticado:
-    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
     col_c = st.columns([1, 1.2, 1])[1]
     with col_c:
         st.markdown("""
@@ -339,7 +357,6 @@ if not st.session_state.autenticado:
 
             st.caption("El registro de nuevos operadores está sujeto a políticas de administración.")
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 
@@ -431,11 +448,40 @@ if menu == "📺 Monitoreo":
 # ============================================================
 elif menu == "👥 Empleados":
     module_header("👥", "Gestión de Empleados",
-                  "Alta, actualización, registro de turno y baja de personal en el sistema.")
+                  "Puestos, alta, registro de turno, actualización y baja de personal en el sistema.")
 
-    tab_alta, tab_turno, tab_editar, tab_lista = st.tabs([
-        "➕ Alta de empleado", "🕐 Registrar turno", "✏️ Modificar empleado", "🗑 Administrar plantilla"
+    tab_puestos, tab_alta, tab_turno, tab_editar, tab_lista = st.tabs([
+        "🧩 Puestos", "➕ Alta de empleado", "🕐 Registrar turno", "✏️ Modificar empleado", "🗑 Administrar plantilla"
     ])
+
+    # ── Tab 0: Puestos (tabla rol_empleado) ──
+    with tab_puestos:
+        st.markdown("#### Puestos existentes")
+        df_roles = pd.DataFrame(st.session_state.roles)[["id", "nombreRol", "descripcion"]].copy()
+        df_roles.columns = ["ID", "Puesto", "Descripción"]
+        st.dataframe(df_roles, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("➕ Cargar nuevo puesto")
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            nombre_rol_nuevo = st.text_input("Nombre del puesto", key="nombre_rol_nuevo")
+        with col_r2:
+            desc_rol_nuevo = st.text_input("Descripción", key="desc_rol_nuevo")
+
+        if st.button("💾 Guardar puesto", type="primary", key="btn_guardar_rol"):
+            if not nombre_rol_nuevo.strip():
+                st.warning("Ingresá el nombre del puesto.")
+            elif any(r["nombreRol"].lower() == nombre_rol_nuevo.strip().lower() for r in st.session_state.roles):
+                st.error(f"Ya existe un puesto llamado \"{nombre_rol_nuevo}\".")
+            else:
+                st.session_state.roles.append({
+                    "id": next_id(st.session_state.roles),
+                    "nombreRol": nombre_rol_nuevo.strip(),
+                    "descripcion": desc_rol_nuevo.strip(),
+                })
+                st.success(f"✅ Puesto \"{nombre_rol_nuevo}\" guardado correctamente.")
+                st.rerun()
 
     # ── Tab 1: Alta ──
     with tab_alta:
@@ -443,31 +489,41 @@ elif menu == "👥 Empleados":
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Datos personales y laborales")
-            nombre_nuevo   = st.text_input("Nombre completo")
-            legajo_nuevo   = st.text_input("Legajo / ID único")
-            rol_nuevo      = st.selectbox("Rol asignado", ["Cajero", "Barista", "Personal de Cocina", "Encargado", "Seguridad"])
-            turno_nuevo    = st.selectbox("Turno habitual", ["Mañana (06:00–14:00)", "Tarde (14:00–22:00)", "Noche (22:00–06:00)"])
+            nombre_nuevo = st.text_input("Nombre completo", key="alta_nombre")
+            genero_nuevo = st.selectbox("Género", ["Masculino", "Femenino", "Otro"], key="alta_genero")
+            estado_nuevo = st.selectbox("Estado", ["Activo", "Inactivo"], key="alta_estado")
+
+            opciones_rol = {r["nombreRol"]: r["id"] for r in st.session_state.roles}
+            if opciones_rol:
+                rol_nuevo_nombre = st.selectbox("Puesto asignado", list(opciones_rol.keys()), key="alta_rol")
+            else:
+                st.warning("No hay puestos cargados. Cargá uno en la pestaña \"Puestos\" antes de dar de alta un empleado.")
+                rol_nuevo_nombre = None
+
+        
         with col2:
             st.subheader("Perfil biométrico")
             st.caption("Suba una imagen facial nítida, de frente, con buena iluminación.")
-            foto = st.file_uploader("Imagen de referencia facial (JPG / PNG)", type=["jpg", "jpeg", "png"])
+            foto = st.file_uploader("Imagen de referencia facial (JPG / PNG)", type=["jpg", "jpeg", "png"], key="alta_foto")
             if foto:
                 st.image(foto, caption="Vista previa", width=200)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.button("💾 Guardar empleado", type="primary"):
-            if not nombre_nuevo or not legajo_nuevo:
-                st.warning("Completá nombre y legajo antes de guardar.")
-            elif any(e["legajo"] == legajo_nuevo for e in st.session_state.empleados):
-                st.error(f"Ya existe un empleado con el legajo {legajo_nuevo}.")
+        if st.button("💾 Guardar empleado", type="primary", key="btn_guardar_empleado"):
+            if not nombre_nuevo.strip():
+                st.warning("Completá el nombre del empleado antes de guardar.")
+            elif rol_nuevo_nombre is None:
+                st.warning("No podés dar de alta un empleado sin un puesto asignado.")
             else:
                 st.session_state.empleados.append({
-                    "legajo": legajo_nuevo,
-                    "nombre": nombre_nuevo,
-                    "rol":    rol_nuevo,
-                    "turno":  turno_nuevo.split(" ")[0],
-                    "activo": True,
+                    "id": next_id(st.session_state.empleados),
+                    "nombre": nombre_nuevo.strip(),
+                    "genero": genero_nuevo,
+                    "rendimiento": rendimiento_nuevo,
+                    "estado": estado_nuevo,
+                    "urlImagen": foto.name if foto else "",
+                    "rol_id": opciones_rol[rol_nuevo_nombre],
                 })
                 st.success(f"✅ Empleado **{nombre_nuevo}** guardado correctamente.")
                 st.balloons()
@@ -475,75 +531,90 @@ elif menu == "👥 Empleados":
     # ── Tab 2: Registrar turno ──
     with tab_turno:
         st.markdown('<div class="argos-card">', unsafe_allow_html=True)
-        empleados_activos = [e for e in st.session_state.empleados if e["activo"]]
-        opciones_emp = {f"{e['nombre']} ({e['legajo']})": e for e in empleados_activos}
+        empleados_activos = [e for e in st.session_state.empleados if e["estado"] == "Activo"]
+        opciones_emp = {f"{e['nombre']} (ID {e['id']})": e for e in empleados_activos}
 
-        col_a, col_b = st.columns(2)
-        with col_a:
-            emp_sel_str = st.selectbox("Empleado", list(opciones_emp.keys()))
-            fecha_t     = st.date_input("Fecha del turno", value=date.today())
-        with col_b:
-            hora_entrada = st.time_input("Hora de entrada", value=dtime(8, 0))
-            hora_salida  = st.time_input("Hora de salida",  value=dtime(16, 0))
+        if not opciones_emp:
+            st.info("No hay empleados activos para registrar un turno.")
+            emp_sel_str = None
+        else:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                emp_sel_str = st.selectbox("Empleado", list(opciones_emp.keys()), key="turno_emp")
+                fecha_t     = st.date_input("Fecha del turno", value=date.today(), key="turno_fecha")
+            with col_b:
+                hora_entrada = st.time_input("Hora de entrada", value=dtime(8, 0), key="turno_entrada")
+                hora_salida  = st.time_input("Hora de salida",  value=dtime(16, 0), key="turno_salida")
 
-        horas_trabajadas = (
-            datetime.combine(date.today(), hora_salida) -
-            datetime.combine(date.today(), hora_entrada)
-        ).seconds / 3600
-        st.info(f"⏱ Horas calculadas: **{horas_trabajadas:.1f} hs**")
+            horas_trabajadas = (
+                datetime.combine(date.today(), hora_salida) -
+                datetime.combine(date.today(), hora_entrada)
+            ).seconds / 3600
+            st.info(f"⏱ Horas calculadas: **{horas_trabajadas:.1f} hs**")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.button("📋 Registrar turno", type="primary"):
+        if emp_sel_str and st.button("📋 Registrar turno", type="primary", key="btn_registrar_turno"):
             emp_data = opciones_emp[emp_sel_str]
             st.session_state.turnos.append({
-                "legajo":  emp_data["legajo"],
-                "nombre":  emp_data["nombre"],
-                "entrada": hora_entrada.strftime("%H:%M"),
-                "salida":  hora_salida.strftime("%H:%M"),
-                "fecha":   str(fecha_t),
-                "horas":   round(horas_trabajadas, 1),
+                "empleado_id": emp_data["id"],
+                "nombre":      emp_data["nombre"],
+                "entrada":     hora_entrada.strftime("%H:%M"),
+                "salida":      hora_salida.strftime("%H:%M"),
+                "fecha":       str(fecha_t),
+                "horas":       round(horas_trabajadas, 1),
             })
             st.success(f"✅ Turno registrado para **{emp_data['nombre']}** — {fecha_t}")
 
         if st.session_state.turnos:
             st.markdown("#### Turnos registrados")
-            df_t = pd.DataFrame(st.session_state.turnos)
+            df_t = pd.DataFrame(st.session_state.turnos).rename(columns={
+                "empleado_id": "ID Empleado", "nombre": "Nombre", "entrada": "Entrada",
+                "salida": "Salida", "fecha": "Fecha", "horas": "Horas",
+            })
             st.dataframe(df_t, use_container_width=True, hide_index=True)
 
     # ── Tab 3: Modificar empleado ──
     with tab_editar:
-        empleados_activos_ed = [e for e in st.session_state.empleados if e["activo"]]
+        empleados_activos_ed = [e for e in st.session_state.empleados if e["estado"] == "Activo"]
         if not empleados_activos_ed:
             st.info("No hay empleados activos para modificar.")
         else:
-            opciones_ed = {f"{e['nombre']} ({e['legajo']})": e for e in empleados_activos_ed}
+            opciones_ed = {f"{e['nombre']} (ID {e['id']})": e for e in empleados_activos_ed}
             emp_ed_str  = st.selectbox("Seleccioná el empleado a modificar", list(opciones_ed.keys()), key="sel_editar")
             emp_ed      = opciones_ed[emp_ed_str]
 
-            # Índice real en la lista de session_state
-            idx_ed = next(i for i, e in enumerate(st.session_state.empleados) if e["legajo"] == emp_ed["legajo"])
+            idx_ed = next(i for i, e in enumerate(st.session_state.empleados) if e["id"] == emp_ed["id"])
 
             st.markdown('<div class="argos-card">', unsafe_allow_html=True)
             col_ed1, col_ed2 = st.columns(2)
 
-            ROLES   = ["Cajero", "Barista", "Personal de Cocina", "Encargado", "Seguridad"]
-            TURNOS  = ["Mañana", "Tarde", "Noche"]
+            GENEROS = ["Masculino", "Femenino", "Otro"]
+            ESTADOS = ["Activo", "Inactivo"]
+            opciones_rol_ed = {r["nombreRol"]: r["id"] for r in st.session_state.roles}
+            nombres_rol = list(opciones_rol_ed.keys())
 
-            rol_idx   = ROLES.index(emp_ed["rol"])   if emp_ed["rol"]   in ROLES  else 0
-            turno_idx = TURNOS.index(emp_ed["turno"]) if emp_ed["turno"] in TURNOS else 0
+            genero_idx = GENEROS.index(emp_ed["genero"]) if emp_ed["genero"] in GENEROS else 0
+            estado_idx = ESTADOS.index(emp_ed["estado"]) if emp_ed["estado"] in ESTADOS else 0
+            rol_actual_nombre = get_rol_nombre(emp_ed["rol_id"])
+            rol_idx = nombres_rol.index(rol_actual_nombre) if rol_actual_nombre in nombres_rol else 0
 
             with col_ed1:
                 st.subheader("Datos personales y laborales")
-                ed_nombre = st.text_input("Nombre completo",  value=emp_ed["nombre"],  key="ed_nombre")
-                st.text_input("Legajo / ID único", value=emp_ed["legajo"], disabled=True,
-                              help="El legajo no puede modificarse.", key="ed_legajo")
-                ed_rol    = st.selectbox("Rol asignado",   ROLES,  index=rol_idx,   key="ed_rol")
-                ed_turno  = st.selectbox("Turno habitual", TURNOS, index=turno_idx, key="ed_turno")
+                ed_nombre = st.text_input("Nombre completo", value=emp_ed["nombre"], key="ed_nombre")
+                st.text_input("ID", value=str(emp_ed["id"]), disabled=True,
+                              help="El ID no puede modificarse.", key="ed_id")
+                ed_genero = st.selectbox("Género", GENEROS, index=genero_idx, key="ed_genero")
+                ed_estado = st.selectbox("Estado", ESTADOS, index=estado_idx, key="ed_estado")
+                ed_rol_nombre = st.selectbox("Puesto asignado", nombres_rol, index=rol_idx, key="ed_rol") if nombres_rol else None
+                ed_rendimiento = st.number_input(
+                    "Rendimiento (%)", min_value=0.0, max_value=100.0,
+                    value=float(emp_ed["rendimiento"]), step=0.5, key="ed_rendimiento",
+                )
 
             with col_ed2:
                 st.subheader("Actualizar perfil biométrico")
                 st.caption("Opcional: subí una nueva imagen solo si querés reemplazar la actual.")
-                foto_ed = st.file_uploader("Nueva imagen facial (JPG / PNG)", type=["jpg","jpeg","png"], key="ed_foto")
+                foto_ed = st.file_uploader("Nueva imagen facial (JPG / PNG)", type=["jpg", "jpeg", "png"], key="ed_foto")
                 if foto_ed:
                     st.image(foto_ed, caption="Vista previa nueva imagen", width=200)
                 else:
@@ -556,39 +627,44 @@ elif menu == "👥 Empleados":
                     st.warning("El nombre no puede estar vacío.")
                 else:
                     st.session_state.empleados[idx_ed]["nombre"] = ed_nombre.strip()
-                    st.session_state.empleados[idx_ed]["rol"]    = ed_rol
-                    st.session_state.empleados[idx_ed]["turno"]  = ed_turno
+                    st.session_state.empleados[idx_ed]["genero"] = ed_genero
+                    st.session_state.empleados[idx_ed]["estado"] = ed_estado
+                    st.session_state.empleados[idx_ed]["rendimiento"] = ed_rendimiento
+                    if ed_rol_nombre:
+                        st.session_state.empleados[idx_ed]["rol_id"] = opciones_rol_ed[ed_rol_nombre]
+                    if foto_ed:
+                        st.session_state.empleados[idx_ed]["urlImagen"] = foto_ed.name
                     st.success(f"✅ Datos de **{ed_nombre}** actualizados correctamente.")
 
     # ── Tab 4: Administrar plantilla ──
-    with tab_lista:  # noqa: F821  (asignada por st.tabs arriba)
+    with tab_lista:
         st.markdown("#### Plantilla activa")
-        df_emp = pd.DataFrame(st.session_state.empleados)
-        df_emp_vis = df_emp[["legajo", "nombre", "rol", "turno"]].copy()
-        df_emp_vis.columns = ["Legajo", "Nombre", "Rol", "Turno"]
+        df_emp = pd.DataFrame(st.session_state.empleados).copy()
+        df_emp["Puesto"] = df_emp["rol_id"].apply(get_rol_nombre)
+        df_emp_vis = df_emp[["id", "nombre", "genero", "Puesto", "rendimiento", "estado"]].copy()
+        df_emp_vis.columns = ["ID", "Nombre", "Género", "Puesto", "Rendimiento", "Estado"]
         st.dataframe(df_emp_vis, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         st.subheader("🗑 Eliminar empleado")
-        legajos_activos = [e["legajo"] for e in st.session_state.empleados if e["activo"]]
-        nombres_activos = [e["nombre"] for e in st.session_state.empleados if e["activo"]]
-        opciones_baja   = {f"{n} ({l})": l for n, l in zip(nombres_activos, legajos_activos)}
+        activos_baja = [e for e in st.session_state.empleados if e["estado"] == "Activo"]
+        opciones_baja = {f"{e['nombre']} (ID {e['id']})": e["id"] for e in activos_baja}
 
         if opciones_baja:
-            emp_baja = st.selectbox("Seleccioná el empleado a eliminar", list(opciones_baja.keys()))
-            motivo   = st.text_input("Motivo de la baja (requerido)")
-            confirmar = st.checkbox("Confirmo que deseo eliminar este perfil del sistema")
+            emp_baja = st.selectbox("Seleccioná el empleado a eliminar", list(opciones_baja.keys()), key="sel_baja")
+            motivo   = st.text_input("Motivo de la baja (requerido)", key="motivo_baja")
+            confirmar = st.checkbox("Confirmo que deseo eliminar este perfil del sistema", key="confirmar_baja")
 
-            if st.button("🗑 Eliminar empleado", type="primary"):
+            if st.button("🗑 Eliminar empleado", type="primary", key="btn_eliminar"):
                 if not motivo:
                     st.warning("Ingresá el motivo de la baja.")
                 elif not confirmar:
                     st.warning("Marcá la casilla de confirmación.")
                 else:
-                    legajo_baja = opciones_baja[emp_baja]
+                    id_baja = opciones_baja[emp_baja]
                     for e in st.session_state.empleados:
-                        if e["legajo"] == legajo_baja:
-                            e["activo"] = False
+                        if e["id"] == id_baja:
+                            e["estado"] = "Inactivo"
                     st.success(f"Empleado **{emp_baja}** eliminado del sistema.")
                     st.rerun()
         else:
@@ -637,20 +713,21 @@ elif menu == "📈 Rendimiento":
 
     # ── Tab 2: Validar jornada ──
     with tab_jornada:
+        empleados_activos_j = [e for e in st.session_state.empleados if e["estado"] == "Activo"]
+        opciones_j = {f"{e['nombre']} (ID {e['id']})": e for e in empleados_activos_j}
+
         col_emp_j, col_fecha_j = st.columns(2)
         with col_emp_j:
-            emp_jornada = st.selectbox(
-                "Empleado",
-                [f"{e['nombre']} ({e['legajo']})" for e in st.session_state.empleados if e["activo"]],
-                key="sel_jornada",
-            )
+            emp_jornada = st.selectbox("Empleado", list(opciones_j.keys()), key="sel_jornada") if opciones_j else None
         with col_fecha_j:
             fecha_j = st.date_input("Fecha a validar", value=date.today(), key="fecha_jornada")
 
-        if st.button("🔍 Consultar jornada", type="primary"):
-            legajo_j = emp_jornada.split("(")[-1].rstrip(")")
+        if not opciones_j:
+            st.info("No hay empleados activos para validar.")
+        elif st.button("🔍 Consultar jornada", type="primary"):
+            id_j = opciones_j[emp_jornada]["id"]
             turnos_emp = [t for t in st.session_state.turnos
-                          if t["legajo"] == legajo_j and t["fecha"] == str(fecha_j)]
+                          if t["empleado_id"] == id_j and t["fecha"] == str(fecha_j)]
             if turnos_emp:
                 for t in turnos_emp:
                     st.markdown(f"""
