@@ -1,19 +1,21 @@
+import os
 import streamlit as st
 import time
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, time as dtime
 import asyncio
-import backend.SPs as api
-import os
+import sys
+import hashlib
+from pathlib import Path
+from datetime import date, datetime, time as dtime
 
-def run_async(coro):
-  """Ejecuta corrutinas asíncronas dentro del entorno síncrono de Streamlit."""
-  try:
-    return asyncio.run(coro)
-  except RuntimeError:
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(coro)
+# ============================================================
+# INYECTOR DE RUTAS DINÁMICO
+# ============================================================
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
+
+import backend.SPs as api
 
 # ============================================================
 # CONFIGURACIÓN GENERAL
@@ -174,13 +176,6 @@ st.markdown("""
 .footer-nav a.active  { color: var(--accent); border-color: var(--border); background: var(--bg-card); }
 .footer-nav a .icon   { font-size: 1.2rem; }
 
-/* ── Pantalla de login ── */
-.login-wrapper {
-    min-height: 85vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 .login-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -188,114 +183,39 @@ st.markdown("""
     padding: 2.5rem 2rem;
     width: 100%;
     max-width: 420px;
+    margin: 6vh auto 0 auto;
 }
-.login-logo {
-    font-size: 2.5rem;
-    text-align: center;
-    margin-bottom: .5rem;
-}
-.login-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-align: center;
-    color: var(--text-primary);
-    margin-bottom: .25rem;
-}
-.login-sub {
-    font-size: .8rem;
-    text-align: center;
-    color: var(--text-muted);
-    margin-bottom: 1.75rem;
-}
+.login-logo { font-size: 2.5rem; text-align: center; margin-bottom: .5rem; }
+.login-title { font-size: 1.5rem; font-weight: 700; text-align: center; color: var(--text-primary); margin-bottom: .25rem; }
+.login-sub { font-size: .8rem; text-align: center; color: var(--text-muted); margin-bottom: 1.75rem; }
 
 /* ── Perfil ── */
-.profile-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-}
-.profile-avatar {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    margin: 0 auto 1rem;
-    border: 3px solid var(--accent);
-}
-.stat-box {
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: .75rem 1rem;
-    margin-bottom: .6rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: .85rem;
-}
+.profile-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; text-align: center; }
+.profile-avatar { width: 90px; height: 90px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1rem; border: 3px solid var(--accent); }
+.stat-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; margin-bottom: .6rem; display: flex; justify-content: space-between; align-items: center; font-size: .85rem; }
 .stat-label { color: var(--text-muted); }
 .stat-value { color: var(--text-primary); font-weight: 600; }
 
 /* ── KPI cards ── */
 .kpi-grid { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-.kpi-box {
-    flex: 1 1 140px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-}
+.kpi-box { flex: 1 1 140px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
 .kpi-value { font-size: 1.75rem; font-weight: 800; color: var(--accent); }
 .kpi-label { font-size: .75rem; color: var(--text-muted); margin-top: .15rem; }
 </style>
 """, unsafe_allow_html=True)
-
+# ============================================================
+# ESTADO DE SESIÓN MAESTRO
+# ============================================================
+if "autenticado" not in st.session_state: st.session_state.autenticado = False
+if "menu_actual" not in st.session_state: st.session_state.menu_actual = "📺 Monitoreo"
+if "user_nombre" not in st.session_state: st.session_state.user_nombre = "Operador"
+if "user_id" not in st.session_state: st.session_state.user_id = 2
 
 # ============================================================
-# ESTADO DE SESIÓN
-# ============================================================
-DEFAULTS = {
-    "autenticado": False,
-    "menu_actual": "📺 Monitoreo",
-    "usuario_input": "",
-    "clave_input": "",
-    # Datos en memoria (en producción vendría de BD)
-    "empleados": [
-        {"legajo": "EMP001", "nombre": "Juan Pérez",    "rol": "Barista",             "turno": "Mañana",  "activo": True},
-        {"legajo": "EMP002", "nombre": "María Gómez",   "rol": "Cajero",              "turno": "Tarde",   "activo": True},
-        {"legajo": "EMP003", "nombre": "Carlos López",  "rol": "Personal de Cocina",  "turno": "Mañana",  "activo": True},
-    ],
-    "turnos": [
-        {"legajo": "EMP001", "nombre": "Juan Pérez",   "entrada": "08:00", "salida": "16:00", "fecha": "2026-06-18", "horas": 8},
-        {"legajo": "EMP002", "nombre": "María Gómez",  "entrada": "14:00", "salida": "22:00", "fecha": "2026-06-18", "horas": 8},
-    ],
-    "incidentes_seg": [
-        {"hora": "14:32:10", "camara": "Cam 01", "descripcion": "Ingreso no autorizado a zona restringida", "gravedad": "Alta"},
-        {"hora": "09:15:44", "camara": "Cam 03", "descripcion": "Persona sin identificación en almacén",   "gravedad": "Media"},
-    ],
-    "incidentes_inc": [
-        {"hora": "11:20:15", "camara": "Cam 02", "descripcion": "Demora crítica en despacho (>15 min)",    "sector": "Cocina",  "gravedad": "Alta"},
-        {"hora": "13:45:00", "camara": "Cam 01", "descripcion": "Empleado abandona puesto sin autorización","sector": "Salón",   "gravedad": "Media"},
-    ],
-}
-
-for key, val in DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = val
-
-
-# ============================================================
-# HELPERS
+# HELPERS VISUALES Y RELACIONALES
 # ============================================================
 def badge(text, tipo="info"):
     return f'<span class="badge badge-{tipo}">{text}</span>'
-
 
 def module_header(icon, title, subtitle=""):
     st.markdown(f"""
@@ -304,66 +224,59 @@ def module_header(icon, title, subtitle=""):
         {'<p>'+subtitle+'</p>' if subtitle else ''}
     </div>""", unsafe_allow_html=True)
 
-
 def kpi(value, label):
     return f'<div class="kpi-box"><div class="kpi-value">{value}</div><div class="kpi-label">{label}</div></div>'
 
-
-def verificar_credenciales():
+async def obtener_nombre_puesto_async(rol_id: int) -> str:
+    """
+    Consulta dinámicamente en Turso Cloud el nombre del puesto basado en su ID,
+    evitando hardcodear catálogos locales en el frontend.
+    """
+    client = api.obtener_cliente_turso()
     try:
-        u = st.secrets["credentials"]["username"]
-        p = st.secrets["credentials"]["password"]
-    except (KeyError, FileNotFoundError):
-        # Credenciales de demo cuando no existe secrets.toml
-        u, p = "admin", "admin123"
-
-    if (st.session_state.usuario_input == u and
-            st.session_state.clave_input == p):
-        st.session_state.autenticado = True
-    else:
-        st.session_state._login_error = True
-
+        query = "SELECT nombreRol FROM rol_empleado WHERE id = ?;"
+        res = await client.execute(query, [int(rol_id)])
+        if res.rows:
+            return str(res.rows[0][0])
+        return "—"
+    except Exception:
+        return "—"
+    finally:
+        await client.close()
 
 # ============================================================
 # LOGICA ASÍNCRONA DE AUTENTICACIÓN CON HASHEO (SHA-256)
 # ============================================================
 async def procesar_login_async(email_usuario, password_usuario):
     """
-    Se ejecuta de forma asíncrona. Hashea la clave ingresada
-    y la compara con la firma criptográfica guardada en Turso.
+    Valida las credenciales transformando la clave ingresada en SHA-256
+    y consultando de forma remota la tabla 'usuario' en Turso Cloud.
     """
-    import hashlib  # Librería nativa para triturar la contraseña
-    
-    # 1. Calculamos el hash de la clave ingresada eliminando espacios invisibles
-    hash_clave_ingresada = hashlib.sha256(str(password_usuario).strip().encode('utf-8')).hexdigest()
-    
     client = api.obtener_cliente_turso()
     try:
-        query_login = "SELECT id, nombre, contrasenia FROM usuario WHERE email = ?;"
-        resultado_db = await client.execute(query_login, [email_usuario])
+        # Calculamos la firma criptográfica para contrastar de forma segura
+        hash_clave_ingresada = hashlib.sha256(str(password_usuario).strip().encode('utf-8')).hexdigest()
         
-        if resultado_db.rows:
-            user_id = resultado_db.rows[0][0]
-            user_nombre = resultado_db.rows[0][1]
-            hash_db = str(resultado_db.rows[0][2]).strip()  # Hash guardado en Turso
+        query = "SELECT id, nombre, contrasenia FROM usuario WHERE email = ?;"
+        resultado = await client.execute(query, [email_usuario.strip()])
+        
+        if resultado.rows:
+            user_id = resultado.rows[0][0]
+            user_nombre = resultado.rows[0][1]
+            clave_db = resultado.rows[0][2]
             
-            # 2. COMPARACIÓN CRIPTOGRÁFICA (Ambos ya son hashes SHA-256)
-            if hash_clave_ingresada == hash_db:
+            if hash_clave_ingresada == str(clave_db).strip():
                 return {"valido": True, "id": user_id, "nombre": user_nombre}
-                
         return {"valido": False}
     except Exception as e:
-        print(f"[Turso Login Error]: {e}")
         return {"valido": False, "error": str(e)}
     finally:
         await client.close()
-
 
 # ============================================================
 # PANTALLA DE LOGIN CONECTADA A TURSO CLOUD
 # ============================================================
 if not st.session_state.autenticado:
-    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
     col_c = st.columns([1, 1.2, 1])[1]
     with col_c:
         st.markdown("""
@@ -374,25 +287,23 @@ if not st.session_state.autenticado:
         </div>""", unsafe_allow_html=True)
 
         with st.container():
-            usuario_mail = st.text_input("Correo Electrónico", key="usuario_input", placeholder="pablo@argosai.com")
-            clave_plana = st.text_input("Contraseña", type="password", key="clave_input", placeholder="••••••••")
+            usuario_mail = st.text_input("Correo Electrónico", placeholder="pablo@argosai.com")
+            clave_plana = st.text_input("Contraseña", type="password", placeholder="••••••••")
 
             if getattr(st.session_state, "_login_error", False):
                 st.error("Correo electrónico o contraseña incorrectos.")
                 st.session_state._login_error = False
 
-            if st.button("Iniciar Sesión", width='stretch', type="primary"):
+            if st.button("Iniciar Sesión", use_container_width=True, type="primary"):
                 if not usuario_mail or not clave_plana:
                     st.warning("Por favor, completa ambos campos.")
                 else:
-                    # Ejecutamos el flujo asíncrono pasándole los datos limpios
                     login_res = asyncio.run(procesar_login_async(usuario_mail.strip(), clave_plana.strip()))
                     
                     if login_res.get("valido"):
                         st.session_state.autenticado = True
                         st.session_state.user_nombre = login_res["nombre"]
                         st.session_state.user_id = login_res["id"]
-                        st.success(f"¡Acceso Concedido! Bienvenido, {login_res['nombre']}.")
                         st.rerun()
                     else:
                         if "error" in login_res:
@@ -402,12 +313,7 @@ if not st.session_state.autenticado:
                             st.rerun()
 
             st.caption("El registro de nuevos operadores está sujeto a políticas de administración.")
-
-    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
-
-
-
 # ============================================================
 # NAVEGACIÓN — footer visual fijo abajo
 # ============================================================
@@ -440,680 +346,468 @@ st.markdown(nav_html, unsafe_allow_html=True)
 # MÓDULO 1 — MONITOREO
 # ============================================================
 if menu == "📺 Monitoreo":
-  module_header(
-      "📺",
-      "Monitoreo Analítico",
-      "Procesamiento de video e identificación de actividades en el entorno"
-      " comercial.",
-  )
+    module_header("📺", "Monitoreo Analítico",
+                  "Procesamiento de video e identificación de actividades en el entorno comercial.")
 
-  tab_live, tab_grabaciones = st.tabs(
-      ["▶ Actividad en tiempo real", "🗄 Ver grabaciones"]
-  )
+    tab_live, tab_grabaciones = st.tabs(["▶ Actividad en tiempo real", "🗄 Ver grabaciones"])
 
-  # ── Tab 1: Tiempo real ──
-  with tab_live:
-    camaras = [
-        "Cámara 01 — Salón / Barra",
-        "Cámara 02 — Cocina",
-        "Cámara 03 — Almacén",
-        "Cámara 04 — Entrada",
-    ]
+    # ── Tab 1: Tiempo real ──
+    with tab_live:
+        camaras = ["Cámara 01 — Salón / Barra", "Cámara 02 — Cocina", "Cámara 03 — Almacén", "Cámara 04 — Entrada"]
 
-    col_sel, col_status = st.columns([2, 1])
-    with col_sel:
-      camara_sel = st.selectbox("Cámara activa", camaras)
-    with col_status:
-      st.markdown("<br>", unsafe_allow_html=True)
-      st.markdown(badge("🟢 EN VIVO", "success"), unsafe_allow_html=True)
+        col_sel, col_status = st.columns([2, 1])
+        with col_sel:
+            camara_sel = st.selectbox("Cámara activa", camaras)
+        with col_status:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(badge("🟢 EN VIVO", "success"), unsafe_allow_html=True)
 
-    st.image(
-        "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=900",
-        caption=f"{camara_sel}  ·  {datetime.now().strftime('%H:%M:%S')}",
-        width='stretch',
-    )
-
-    st.markdown("---")
-    st.markdown("**Miniaturas — Resto de cámaras**")
-    cols_thumb = st.columns(3)
-    thumbs = [c for c in camaras if c != camara_sel]
-    for i, col in enumerate(cols_thumb):
-      if i < len(thumbs):
-        with col:
-          st.image(
-              "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=300",
-              caption=thumbs[i],
-              width='stretch',
-          )
-
-  # ── Tab 2: Grabaciones ──
-  with tab_grabaciones:
-    col_f, col_c, col_h = st.columns([1.2, 1.2, 1])
-    with col_f:
-      fecha_gr = st.date_input("Fecha", value=date.today())
-    with col_c:
-      camara_gr = st.selectbox("Cámara", camaras, key="sel_grab")
-    with col_h:
-      hora_gr = st.selectbox(
-          "Franja horaria",
-          ["00:00–06:00", "06:00–12:00", "12:00–18:00", "18:00–24:00"],
-      )
-
-    if st.button("🔍 Buscar grabación", type="primary"):
-      with st.spinner("Recuperando grabación..."):
-        st.success(
-            f"Grabación encontrada: {camara_gr} · {fecha_gr} · {hora_gr}"
+        st.image(
+            "https://unsplash.com",
+            caption=f"{camara_sel}  ·  {datetime.now().strftime('%H:%M:%S')}",
+            use_container_width=True,
         )
-        st.video("https://www.w3schools.com/html/mov_bbb.mp4")
 
+        st.markdown("---")
+        st.markdown("**Miniaturas — Resto de cámaras**")
+        cols_thumb = st.columns(3)
+        thumbs = [c for c in camaras if c != camara_sel]
+        for i, col in enumerate(cols_thumb):
+            if i < len(thumbs):
+                with col:
+                    st.image(
+                        "https://unsplash.com",
+                        caption=thumbs[i], use_container_width=True,
+                    )
 
+    # ── Tab 2: Grabaciones ──
+    with tab_grabaciones:
+        col_f, col_c, col_h = st.columns([1.2, 1.2, 1])
+        with col_f:
+            fecha_gr = st.date_input("Fecha", value=date.today())
+        with col_c:
+            camara_gr = st.selectbox("Cámara", camaras, key="sel_grab")
+        with col_h:
+            hora_gr = st.selectbox("Franja horaria", ["00:00–06:00", "06:00–12:00", "12:00–18:00", "18:00–24:00"])
+
+        if st.button("🔍 Buscar grabación", type="primary"):
+            with st.spinner("Recuperando grabación..."):
+                time.sleep(1)
+            st.success(f"Grabación encontrada: {camara_gr} · {fecha_gr} · {hora_gr}")
+            st.video("https://w3schools.com")
 # ============================================================
-# MÓDULO 2 — GESTIONAR EMPLEADO
+# MÓDULO 2 — GESTIONAR EMPLEADO (CONECTADO REAL A TURSO CLOUD)
 # ============================================================
 elif menu == "👥 Empleados":
-    module_header("👥", "Gestión de Personal Remota", "Administración directa sobre la base de datos de Turso.")
-    tab_alta, tab_lista, tab_horas = st.tabs(["➕ Alta de Personal", "📋 Ver Plantilla", "⏱ Ver Horas Extra"])
-    
+    module_header("👥", "Gestión de Empleados",
+                  "Puestos, alta, registro de turno y administración avanzada de plantilla biométrica remota.")
+
+    tab_puestos, tab_alta, tab_turno, tab_lista = st.tabs([
+        "🧩 Puestos", "➕ Alta de empleado", "🕐 Registrar turno", "🗑 Administrar plantilla"
+    ])
+
+    # ── Tab 0: Puestos (tabla rol_empleado en la nube) ──
+    with tab_puestos:
+        st.markdown("#### Puestos existentes (roles relacionales)")
+        
+        async def consultar_roles_seguro():
+            client = api.obtener_cliente_turso()
+            try:
+                res = await client.execute("SELECT id, nombreRol, descripcion FROM rol_empleado;")
+                return res.rows if res.rows else []
+            except Exception as e:
+                print(f"[Error Puestos]: {e}")
+                return []
+            finally:
+                await client.close()
+
+        filas_roles = asyncio.run(consultar_roles_seguro())
+        
+        if filas_roles:
+            df_roles = pd.DataFrame(filas_roles, columns=["ID", "Puesto", "Descripción"])
+            st.dataframe(df_roles, use_container_width=True, hide_index=True)
+            opciones_puestos = {f"{fila[1]} (ID: {fila[0]})": fila[0] for fila in filas_roles}
+        else:
+            st.info("No se registran puestos cargados en la base de datos.")
+            opciones_puestos = {}
+
+        st.markdown("---")
+        st.subheader("➕ Cargar nuevo puesto")
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            nombre_rol_nuevo = st.text_input("Nombre del puesto", key="nombre_rol_nuevo")
+        with col_r2:
+            desc_rol_nuevo = st.text_input("Descripción", key="desc_rol_nuevo")
+
+        if st.button("💾 Guardar puesto", type="primary", key="btn_guardar_rol"):
+            if not nombre_rol_nuevo.strip():
+                st.warning("Ingresá el nombre del puesto.")
+            else:
+                async def guardar_puesto_async(nom, desc):
+                    client = api.obtener_cliente_turso()
+                    try:
+                        await client.execute("INSERT INTO rol_empleado (nombreRol, descripcion) VALUES (?, ?);", [nom, desc])
+                        return {"exito": True}
+                    except Exception as e:
+                        return {"exito": False, "msg": str(e)}
+                    finally:
+                        await client.close()
+                
+                res_puesto = asyncio.run(guardar_puesto_async(nombre_rol_nuevo.strip(), desc_rol_nuevo.strip()))
+                if res_puesto.get("exito"):
+                    st.success(f"✅ Puesto \"{nombre_rol_nuevo}\" guardado correctamente en Turso Cloud.")
+                    st.rerun()
+                else:
+                    st.error(f"Fallo al guardar puesto: {res_puesto.get('msg')}")
+
+    # ── Tab 1: Alta de Empleado (Autoincremental + Multi-Foto con Preview) ──
     with tab_alta:
         st.markdown('<div class="argos-card">', unsafe_allow_html=True)
-        id_n = st.number_input("Legajo Numérico", step=1, value=50)
-        nom_n = st.text_input("Nombre Completo")
-        gen_n = st.selectbox("Género", ["Masculino", "Femenino", "Otro"])
-        rol_n = st.selectbox("Puesto", [1, 2], help="1: Administrativo, 2: Operario")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if st.button("Impactar Alta Remota"):
-            if not nom_n:
-                st.warning("Completa el nombre completo.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Datos personales y laborales")
+            st.caption("ℹ️ El Legajo (ID) será autogenerado de forma incremental por la base de datos.")
+            nombre_nuevo = st.text_input("Nombre completo", key="alta_nombre_input")
+            genero_nuevo = st.selectbox("Género", ["Masculino", "Femenino", "Otro"], key="alta_genero_input")
+            
+            if opciones_puestos:
+                rol_nuevo_nombre = st.selectbox("Puesto asignado", list(opciones_puestos.keys()), key="alta_rol_input")
             else:
-                # 🟢 CAMBIO 1: Guardado asíncrono para Turso Cloud
-                asyncio.run(api.crear_empleado(
-                    id_emp=id_n, 
-                    nombre=nom_n, 
-                    genero=gen_n, 
-                    rendimiento=100.0, 
-                    estado="Activo", 
-                    url_imagen=f"data/biometria/emp_{id_n}", 
-                    rol_id=rol_n, 
+                st.warning("Cargue los puestos de la base de datos antes de continuar.")
+                rol_nuevo_nombre = None
+        with col2:
+            st.subheader("Perfil biométrico multi-imagen")
+            st.caption("Suba una o más imágenes faciales nítidas para el entrenamiento de la IA.")
+            fotos = st.file_uploader("Imágenes de referencia facial (JPG / PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="alta_fotos_uploader")
+            
+            if fotos:
+                st.markdown("**Vista previa de capturas seleccionadas:**")
+                cols_preview = st.columns(min(len(fotos), 4))
+                for idx, f in enumerate(fotos):
+                    with cols_preview[idx % 4]:
+                        st.image(f.getvalue(), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if st.button("💾 Guardar empleado", type="primary", key="btn_guardar_empleado"):
+            if not nombre_nuevo.strip():
+                st.warning("Completá el nombre del empleado antes de guardar.")
+            elif rol_nuevo_nombre is None:
+                st.warning("No podés dar de alta un empleado sin un puesto asignado.")
+            else:
+                async def registrar_empleado_automatico(nom, gen, r_id):
+                    client = api.obtener_cliente_turso()
+                    try:
+                        query = "INSERT INTO empleado (nombre, genero, rendimiento, estado, urlImagen, rol_id) VALUES (?, ?, ?, ?, ?, ?);"
+                        res = await client.execute(query, [nom, gen, 100.0, "Activo", "temporal", int(r_id)])
+                        nuevo_id = res.last_insert_rowid
+                        
+                        folder_path = f"data/biometria/empleado_{nuevo_id}"
+                        os.makedirs(folder_path, exist_ok=True)
+                        
+                        await client.execute("UPDATE empleado SET urlImagen = ? WHERE id = ?;", [folder_path, nuevo_id])
+                        return {"exito": True, "id": nuevo_id, "folder": folder_path}
+                    except Exception as e:
+                        return {"exito": False, "msg": str(e)}
+                    finally:
+                        await client.close()
+
+                res_alta = asyncio.run(registrar_empleado_automatico(nombre_nuevo.strip(), genero_nuevo, opciones_puestos[rol_nuevo_nombre]))
+                
+                if res_alta.get("exito"):
+                    if fotos:
+                        for idx, f in enumerate(fotos):
+                            ruta_foto = Path(res_alta["folder"]) / f"rostro_{idx}_{f.name}"
+                            with open(ruta_foto, "wb") as file_dest:
+                                file_dest.write(f.getvalue())
+                    st.success(f"✅ Empleado guardado de forma autoincremental con Legajo ID: {res_alta['id']}")
+                    st.balloons()
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error(f"Fallo al registrar en la nube: {res_alta.get('msg')}")
+                        # ── Tab 2: Registrar turno ──
+    with tab_turno:
+        st.markdown('<div class="argos-card">', unsafe_allow_html=True)
+        plantilla_turnos = asyncio.run(api.obtener_todos_los_empleados())
+        if not plantilla_turnos:
+            st.info("No hay empleados registrados para asignar turnos.")
+        else:
+            opciones_emp_t = {f"{e['nombre']} (ID: {e['id']})": e['id'] for e in plantilla_turnos}
+            col_a, col_b = st.columns(2)
+            with col_a:
+                emp_sel_t = st.selectbox("Seleccioná el Empleado:", list(opciones_emp_t.keys()), key="turno_emp_sel")
+                fecha_t = st.date_input("Fecha del turno", value=date.today(), key="turno_fecha")
+            with col_b:
+                hora_entrada = st.time_input("Hora de entrada", value=dtime(8, 0), key="turno_entrada")
+                hora_salida = st.time_input("Hora de salida", value=dtime(16, 0), key="turno_salida")
+                horas_trabajadas = (datetime.combine(date.today(), hora_salida) - datetime.combine(date.today(), hora_entrada)).seconds / 3600
+                st.info(f"⏱ Horas calculadas: **{horas_trabajadas:.1f} hs**")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            if st.button("📋 Registrar turno", type="primary", key="btn_registrar_turno"):
+                res_t = asyncio.run(api.asignar_turno_completo(
+                    empleado_id=opciones_emp_t[emp_sel_t], 
+                    hora_inicio=hora_entrada.strftime("%H:%M:%S"), 
+                    hora_fin=hora_salida.strftime("%H:%M:%S"), 
+                    descanso_inicio="12:00:00", 
+                    descanso_fin="13:00:00", 
+                    lista_dias_id=[1],
                     usuario_actual_id=st.session_state.user_id
                 ))
-                st.success(f"¡{nom_n} guardado en Turso Cloud!")
+                if res_t.get("exito"): 
+                    st.success("Turno guardado y auditado de forma atómica en Turso Cloud.")
+                else: 
+                    st.error(res_t.get("mensaje", "Error al procesar el turno."))
 
+    # ── Tab 3: Administrar plantilla (Modificación e imágenes sin bug de refresco) ──
     with tab_lista:
-        st.subheader("Plantilla Activa Obtenida de Turso")
+        st.markdown("#### Plantilla activa de la Heladería (Turso Cloud)")
+        plantilla = asyncio.run(api.obtener_todos_los_empleados())
         
-        # 🟢 CAMBIO 2: Consulta asíncrona para Turso Cloud
-        lista_empleados = asyncio.run(api.obtener_todos_los_empleados())
-        
-        if lista_empleados:
-            df = pd.DataFrame(lista_empleados)
-            st.dataframe(df, width='stretch', hide_index=True)
+        if plantilla:
+            df_p = pd.DataFrame(plantilla)
+            df_p.columns = ["ID", "Nombre", "Género", "Rendimiento", "Estado"]
+            st.dataframe(df_p, use_container_width=True, hide_index=True)
             
             st.markdown("---")
-            id_b = st.number_input("ID a remover", step=1)
-            if st.button("Remover Perfil", type="primary"):
-                # 🟢 CAMBIO 3: Baja asíncrona para Turso Cloud
-                asyncio.run(api.borrar_empleado(id_b, st.session_state.user_id))
-                st.success("Registro procesado.")
-                st.rerun()
-        else:
-            st.info("No se registran empleados activos en la base de datos.")
+            st.subheader("✏️ Panel de Modificación y Control Biométrico")
+            
+            opciones_gestion = {f"{e['Nombre']} (ID: {e['ID']})": e for _, e in df_p.iterrows()}
+            emp_gestion_sel = st.selectbox("Seleccioná el empleado a gestionar / editar:", list(opciones_gestion.keys()), key="sb_gestion_avanzada")
+            empleado_a_editar = opciones_gestion[emp_gestion_sel]
+            id_mod = int(empleado_a_editar["ID"])
+            
+            st.markdown(f"**Gestión Activa del Legajo ID: {id_mod}**")
+            st.markdown('<div class="argos-card">', unsafe_allow_html=True)
+            col_m1, col_m2 = st.columns(2)
+            
+            with col_m1:
+                nuevo_nom_mod = st.text_input("Nombre completo", value=empleado_a_editar["Nombre"], key=f"mod_nom_{id_mod}")
+                nuevo_gen_mod = st.selectbox("Género", ["Masculino", "Femenino", "Otro"], index=["Masculino", "Femenino", "Otro"].index(empleado_a_editar["Género"]) if empleado_a_editar["Género"] in ["Masculino", "Femenino", "Otro"] else 0, key=f"mod_gen_{id_mod}")
+                nuevo_est_mod = st.selectbox("Estado", ["Activo", "Inactivo"], index=["Activo", "Inactivo"].index(empleado_a_editar["Estado"]) if empleado_a_editar["Estado"] in ["Activo", "Inactivo"] else 0, key=f"mod_est_{id_mod}")
+            
+            with col_m2:
+                st.markdown("⚙️ **Visualizador Biométrico (SSD Local)**")
+                folder_biometria = f"data/biometria/empleado_{id_mod}"
+                
+                if os.path.exists(folder_biometria):
+                    archivos_faciales = [f for f in os.listdir(folder_biometria) if f.endswith((".jpg", ".png", ".jpeg"))]
+                    if archivos_faciales:
+                        st.caption(f"📁 Se detectaron {len(archivos_faciales)} imágenes guardadas para este perfil.")
+                        
+                        cols_galeria = st.columns(min(len(archivos_faciales), 4))
+                        for idx_g, f_gal in enumerate(archivos_faciales):
+                            with cols_galeria[idx_g % 4]:
+                                ruta_img_g = os.path.join(folder_biometria, f_gal)
+                                with open(ruta_img_g, "rb") as file_g:
+                                    st.image(file_g.read(), caption=f_gal, use_container_width=True)
+                                if st.button("🗑 Borrar", key=f"del_{id_mod}_{idx_g}", type="secondary"):
+                                    os.remove(ruta_img_g)
+                                    st.success(f"Eliminado.")
+                                    st.rerun()
+                    else:
+                        st.info("La carpeta única del empleado no contiene imágenes biométricas.")
+                else:
+                    st.info("No se ha inicializado el directorio físico de imágenes de este legajo.")
+                
+                st.markdown("---")
+                fotos_nuevas_mod = st.file_uploader("Adjuntar más imágenes a este perfil:", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key=f"fotos_add_mod_{id_mod}")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            if st.button("💾 Guardar cambios de perfil", type="primary", key=f"btn_save_mod_changes_{id_mod}"):
+                async def actualizar_empleado_async(e_id, nom, gen, est, carpeta, fotos_nuevas):
+                    client = api.obtener_cliente_turso()
+                    try:
+                        query = "UPDATE empleado SET nombre = ?, genero = ?, estado = ?, urlImagen = ? WHERE id = ?;"
+                        await client.execute(query, [nom, gen, est, carpeta, int(e_id)])
+                        
+                        if fotos_nuevas:
+                            os.makedirs(carpeta, exist_ok=True)
+                            for idx, f in enumerate(fotos_nuevas):
+                                timestamp_append = datetime.now().strftime("%H%M%S")
+                                ruta_append = Path(carpeta) / f"rostro_append_{timestamp_append}_{idx}_{f.name}"
+                                with open(ruta_append, "wb") as f_dest:
+                                    f_dest.write(f.getvalue())
+                        return {"exito": True}
+                    except Exception as e:
+                        return {"exito": False, "msg": str(e)}
+                    finally:
+                        await client.close()
+                        
+                res_mod = asyncio.run(actualizar_empleado_async(id_mod, nuevo_nom_mod.strip(), nuevo_gen_mod, nuevo_est_mod, folder_biometria, fotos_nuevas_mod))
+                if res_mod.get("exito"):
+                    st.success("✅ Cambios de perfil e imágenes guardados con éxito.")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error(res_mod.get("msg"))
 
-    with tab_horas:
-        id_h = st.number_input("Consultar Horas Extra del Empleado ID", step=1, value=2)
-        # 🟢 CAMBIO 4: Consulta de horas extra asíncrona
-        extras = asyncio.run(api.obtener_horas_extra_empleado(id_h))
-        if extras: 
-            st.dataframe(pd.DataFrame(extras), width='stretch', hide_index=True)
-        else: 
-            st.info("Sin registros de horas extra calculadas para este ID.")
+            # ── SISTEMA DE ELIMINACIÓN Y PURGA ATÓMICA DE IMÁGENES EN DISCO ──
+            st.markdown("---")
+            st.subheader("🗑 Eliminar perfil de empleado")
+            
+            motivo = st.text_input("Motivo de la baja remota (requerido)", key=f"motivo_baja_{id_mod}")
+            # 🟢 REQUERIMIENTO COMPLETO: Pregunta opcional si se desea purgar los binarios locales
+            purgar_disco = st.checkbox("⚠️ Deseo eliminar también la carpeta física con todas sus imágenes de la IA", key=f"purge_disk_{id_mod}")
+            confirmar = st.checkbox("Confirmo que deseo remover definitivamente este legajo de Turso Cloud", key=f"confirmar_baja_{id_mod}")
+
+            if st.button("🗑 Eliminar empleado", type="primary", key=f"btn_eliminar_{id_mod}"):
+                if not motivo:
+                    st.warning("Ingresá el motivo de la baja para el registro de auditoría.")
+                elif not confirmar:
+                    st.warning("Marcá la casilla de confirmación.")
+                else:
+                    res_b = asyncio.run(api.borrar_empleado(id_mod, st.session_state.user_id))
+                    if res_b.get("exito"):
+                        # Si marcó la opción de purgar, barremos el directorio usando shutil de forma segura
+                        if purgar_disco and os.path.exists(folder_biometria):
+                            import shutil
+                            try:
+                                shutil.rmtree(folder_biometria)
+                                st.warning(f"📁 Directorio biométrico '{folder_biometria}' borrado del almacenamiento.")
+                            except Exception as e_sh:
+                                print(f"[Error Shutil Purge]: {e_sh}")
+                        
+                        st.success(f"Empleado ID {id_mod} removido del sistema.")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(res_b["mensaje"])
+        else:
+            st.info("No se registran empleados activos en la base de datos remota.")
 
 
 # ============================================================
-# MÓDULO 3 — RENDIMIENTO LABORAL
+# MÓDULO 3 — RENDIMIENTO LABORAL (VIDEOS DE LA IA EN VIVO)
 # ============================================================
 elif menu == "📈 Rendimiento":
-  module_header(
-      "📈",
-      "Rendimiento Laboral",
-      "Métricas de productividad, validación de jornadas y reproducción de"
-      " highlights.",
-  )
+    module_header("📈", "Rendimiento Laboral", "Métricas de productividad, validación de jornadas y reproducción de highlights.")
+    tab_metricas, tab_jornada, tab_highlights = st.tabs(["📊 Métricas de actividad", "✔ Validar jornada laboral", "🎬 Highlights de la IA"])
 
-  tab_metricas, tab_jornada, tab_highlights = st.tabs([
-      "📊 Métricas de actividad",
-      "✔ Validar jornada laboral",
-      "🎬 Highlights",
-  ])
+    with tab_metricas:
+        # 🟢 CORREGIDO: Encapsulamiento asíncrono para KPIs y Métricas en Rendimiento
+        async def consultar_metricas_seguro():
+            client = api.obtener_cliente_turso()
+            try:
+                res_emp = await client.execute("SELECT COUNT(*) FROM empleado WHERE estado = 'Activo';")
+                res_al = await client.execute("SELECT COUNT(*) FROM alerta;")
+                res_ana = await client.execute("SELECT nombre, rendimiento, estado FROM empleado;")
+                
+                return {
+                    "activos": res_emp.rows[0][0] if res_emp.rows else 0,
+                    "alertas": res_al.rows[0][0] if res_al.rows else 0,
+                    "filas": res_ana.rows if res_ana.rows else []
+                }
+            except Exception as e:
+                print(f"[Error Metricas]: {e}")
+                return {"activos": 0, "alertas": 0, "filas": []}
+            finally:
+                await client.close()
 
-  # ── Tab 1: Métricas conectadas a Turso BD ──
-  with tab_metricas:
-    col_filtro, _ = st.columns([1, 2])
-    with col_filtro:
-      periodo = st.selectbox("Período", ["Hoy", "Última semana", "Último mes"])
+        metricas_data = asyncio.run(consultar_metricas_seguro())
 
-    # Consulta real a la base de datos
-    datos_empleados, _ = run_async(api.obtener_rendimiento_y_jornada())
-    alertas_db = run_async(api.obtener_todas_las_alertas())
-
-    if datos_empleados:
-      df_view = pd.DataFrame(datos_empleados)
-      emp_activos = (
-          len(df_view[df_view["estado"] == "Activo"])
-          if "estado" in df_view.columns
-          else len(df_view)
-      )
-      eficiencia_prom = (
-          int(df_view["rendimiento"].mean())
-          if "rendimiento" in df_view.columns and not df_view.empty
-          else 0
-      )
-      alertas_act = len(alertas_db) if alertas_db else 0
-
-      st.markdown(
-          f"""
-            <div class="kpi-grid">
-                <div class="kpi-box"><div class="kpi-value">{emp_activos}</div><div class="kpi-label">Empleados activos</div></div>
-                <div class="kpi-box"><div class="kpi-value">{eficiencia_prom}%</div><div class="kpi-label">Eficiencia promedio</div></div>
-                <div class="kpi-box"><div class="kpi-value">48 hs</div><div class="kpi-label">Horas registradas</div></div>
-                <div class="kpi-box"><div class="kpi-value">{alertas_act}</div><div class="kpi-label">Alertas activas</div></div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-
-      st.dataframe(df_view, width='stretch', hide_index=True)
-    else:
-      st.info(
-          "No se encontraron métricas de rendimiento registradas en la base de"
-          " datos."
-      )
-
-  # ── Tab 2: Validar jornada ──
-  with tab_jornada:
-    col_emp_j, col_fecha_j = st.columns(2)
-
-    plantilla_empleados = run_async(api.obtener_todos_los_empleados())
-    opciones_emp = (
-        [f"{e['nombre']} (ID: {e['id']})" for e in plantilla_empleados]
-        if plantilla_empleados
-        else []
-    )
-
-    with col_emp_j:
-      if opciones_emp:
-        emp_jornada = st.selectbox("Empleado", opciones_emp, key="sel_jornada")
-      else:
-        st.warning("No hay empleados registrados en el sistema.")
-        emp_jornada = None
-
-    with col_fecha_j:
-      fecha_j = st.date_input(
-          "Fecha a validar", value=date.today(), key="fecha_jornada"
-      )
-
-    if st.button("🔍 Consultar jornada", type="primary") and emp_jornada:
-      id_emp_sel = int(emp_jornada.split("ID: ")[-1].rstrip(")"))
-      _, datos_jornadas = run_async(api.obtener_rendimiento_y_jornada())
-
-      # Filtrar fichadas asociadas al empleado
-      nombre_emp_limpio = emp_jornada.split(" (ID:")[0]
-      jornadas_emp = (
-          [j for j in datos_jornadas if j.get("empleado") == nombre_emp_limpio]
-          if datos_jornadas
-          else []
-      )
-
-      if jornadas_emp:
-        for j in jornadas_emp:
-          estado_badge = (
-              badge("✔ Jornada con Marcación", "success")
-              if j.get("salida") != "Sin registro"
-              else badge("⚠ Marcación Incompleta", "warning")
-          )
-          st.markdown(
-              f"""
-                    <div class="argos-card">
-                        <b>{j['empleado']}</b> · {fecha_j}<br>
-                        Turno Teórico: <b>{j['hora_inicio']} a {j['hora_fin']}</b><br>
-                        Entrada Real: <b>{j['entrada']}</b> &nbsp;|&nbsp; Salida Real: <b>{j['salida']}</b>
-                        &nbsp; {estado_badge}
-                    </div>
-                    """,
-              unsafe_allow_html=True,
-          )
-      else:
-        st.warning(
-            f"No se encontraron fichadas de jornada para {emp_jornada} en la"
-            f" fecha {fecha_j}."
-        )
-
-  # ── Tab 3: Highlights ──
-  with tab_highlights:
-    st.info(
-        "Reproducciones automáticas de momentos destacados detectados por la"
-        " IA."
-    )
-
-    highlights_locales = api.listar_highlights_totales()
-
-    col_h_sel, _ = st.columns([1.5, 1])
-    with col_h_sel:
-      fechaH = st.date_input("Fecha de highlights", value=date.today())
-
-    if highlights_locales:
-      for h in highlights_locales:
-        with st.expander(
-            f"🎬 {h['actividad']} · {h['empleado']} ({h['hora']})"
-        ):
-          col_hl, col_hr = st.columns([2, 1])
-          with col_hl:
-            st.video(h["url_reproduccion"])
-          with col_hr:
-            st.markdown(f"""
-                        **Empleado:** {h['empleado']}  
-                        **Actividad:** {h['actividad']}  
-                        **Fecha:** {h['fecha']}  
-                        **Hora:** {h['hora']}  
-                        """)
-            st.markdown(badge("⭐ Destacado", "info"), unsafe_allow_html=True)
-    else:
-      st.caption("No hay clips de highlights almacenados en el servidor local.")
-
-
-# ============================================================
-# MÓDULO 4 — SEGURIDAD Y AUDITORÍA
-# ============================================================
-elif menu == "🛡️ Seguridad":
-  module_header(
-      "🛡️",
-      "Auditoría de Alertas",
-      "Historial crítico de incidencias operacionales y movimientos"
-      " sospechosos.",
-  )
-
-  tab_seg, tab_inc, tab_gestion = st.tabs([
-      "🔒 Eventos de seguridad",
-      "⚠ Cargar alerta manual",
-      "🗑️ Gestión y borrado",
-  ])
-
-  # ── TAB 1: EVENTOS DE SEGURIDAD ──
-  with tab_seg:
-    st.subheader("Historial de Incidencias en Tiempo Real")
-
-    try:
-      alertas_db = run_async(api.obtener_todas_las_alertas())
-    except Exception as e:
-      st.error(f"Error al consultar alertas en Turso: {e}")
-      alertas_db = []
-
-    if alertas_db:
-      df_al = pd.DataFrame(alertas_db)
-      cols = df_al.columns.tolist()
-
-      col_fecha = (
-          "fechaYHora"
-          if "fechaYHora" in cols
-          else ("fecha" if "fecha" in cols else None)
-      )
-      col_grado = "grado" if "grado" in cols else None
-      col_inc = "incumplimiento" if "incumplimiento" in cols else None
-      col_emp = (
-          "empleado"
-          if "empleado" in cols
-          else ("empleado_id" if "empleado_id" in cols else None)
-      )
-
-      cols_vis = [
-          c for c in [col_fecha, col_grado, col_inc, col_emp] if c is not None
-      ]
-      st.dataframe(
-          df_al[cols_vis] if cols_vis else df_al,
-          use_container_width=True,
-          hide_index=True,
-      )
-
-      st.markdown("---")
-      st.subheader("📹 Reproducir Grabación del Evento")
-
-      opciones_alertas = [
-          f"[ID {a.get('id', 'N/A')}] — {a.get('empleado', a.get('empleado_id', 'Desc'))} — {a.get('incumplimiento', 'Sin detalle')}"
-          for a in alertas_db
-      ]
-      alerta_sel = st.selectbox(
-          "Seleccioná la alerta para auditar",
-          opciones_alertas,
-          key="sel_auditoria_al",
-      )
-
-      try:
-        id_al_sel = int(alerta_sel.split("]")[0].replace("[ID ", ""))
-        al_data = next(
-            (a for a in alertas_db if a.get("id") == id_al_sel), None
-        )
-      except Exception:
-        al_data = None
-
-      if al_data:
-        col_iv, col_im = st.columns([2, 1])
-        with col_iv:
-          url_v = al_data.get("url_video") or al_data.get("video_url")
-          if url_v:
-            st.video(url_v)
-          else:
-            st.info("Sin video adjunto. Mostrando transmisión de respaldo:")
-            st.video("https://www.w3schools.com/html/mov_bbb.mp4")
-
-        with col_im:
-          grav_tipo = (
-              "danger"
-              if str(al_data.get("grado", "")).lower()
-              in ["alto", "crítico", "critico"]
-              else "warning"
-          )
-          st.markdown(
-              f"""
-                    <div class="argos-card" style="margin-top:0;">
-                        <b>Operador:</b> {st.session_state.get('user_nombre', 'N/A')}<br>
-                        <b>Gravedad:</b> {badge(al_data.get('grado', 'Media'), grav_tipo)}<br>
-                        <b>Fecha:</b> {al_data.get('fechaYHora', al_data.get('fecha', 'N/A'))}
-                    </div>
-                    """,
-              unsafe_allow_html=True,
-          )
-    else:
-      st.info("No se registran alertas operacionales en la base de datos.")
-
-  # ── TAB 2: CARGA MANUAL CON ADJUNTO Y LÍMITE ──
-  with tab_inc:
-    st.subheader("Registro Manual de Incumplimientos")
-    st.markdown(
-        "Ingresá alertas manualmente y adjuntá clips breves de evidencia."
-    )
-
-    st.markdown('<div class="argos-card">', unsafe_allow_html=True)
-    col_an, col_as = st.columns(2)
-
-    with col_an:
-      nueva_desc = st.text_input(
-          "Descripción del incumplimiento", key="input_desc_manual"
-      )
-      nueva_grav = st.selectbox(
-          "Gravedad de la Alerta", ["Alta", "Media", "Baja"], key="ng_manual"
-      )
-
-    with col_as:
-      try:
-        plantilla_empleados = run_async(api.obtener_todos_los_empleados())
-      except Exception:
-        plantilla_empleados = []
-
-      if plantilla_empleados:
-        opciones_emp_alertas = {
-            f"{e.get('nombre', 'Empleado')} (ID: {e.get('id')})": e.get("id")
-            for e in plantilla_empleados
-            if "id" in e
-        }
-        emp_alerta_sel = st.selectbox(
-            "Empleado involucrado:",
-            list(opciones_emp_alertas.keys()),
-            key="sel_emp_al_manual",
-        )
-        id_empleado_alerta = opciones_emp_alertas[emp_alerta_sel]
-      else:
-        st.warning("No hay empleados registrados.")
-        id_empleado_alerta = None
-
-    st.markdown("---")
-    st.markdown("**Adjuntar evidencia multimedia**")
-    archivo_v = st.file_uploader(
-        "Seleccionar video (Máximo 50 MB / ~2 minutos)",
-        type=["mp4", "avi", "mkv", "mov"],
-        key="file_al_manual",
-    )
-
-    # Validación de límite de tamaño (50 MB)
-    video_valido = True
-    if archivo_v is not None:
-      tamano_mb = archivo_v.size / (1024 * 1024)
-      if tamano_mb > 50:
-        st.error(
-            f"El archivo pesa {tamano_mb:.1f} MB. Excede el límite máximo"
-            " permitido de 50 MB."
-        )
-        video_valido = False
-      else:
-        st.caption(
-            f"✔ Clip listo para cargar ({tamano_mb:.1f} MB). Duración estimada:"
-            " < 2 min."
-        )
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if st.button(
-        "Guardar Alerta Manual", type="primary", key="btn_guardar_al_manual"
-    ):
-      if not nueva_desc.strip():
-        st.warning("Ingresá una descripción antes de guardar.")
-      elif id_empleado_alerta is None:
-        st.error("Se requiere asociar un empleado válido.")
-      elif not video_valido:
-        st.error("Corregí el archivo adjunto antes de continuar.")
-      else:
-        url_video_final = None
-
-        if archivo_v is not None:
-          os.makedirs("./data/highlights_media_bd", exist_ok=True)
-          nombre_archivo = f"manual_{id_empleado_alerta}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
-          ruta_destino = os.path.join(
-              "./data/highlights_media_bd", nombre_archivo
-          )
-
-          with open(ruta_destino, "wb") as f:
-            f.write(archivo_v.getbuffer())
-
-          url_video_final = (
-              f"http://localhost:8000/static/videos/{nombre_archivo}"
-          )
-
-        try:
-          run_async(
-              api.guardar_alerta(
-                  grado=nueva_grav,
-                  incumplimiento=nueva_desc,
-                  empleado_id=id_empleado_alerta,
-                  url_video=url_video_final,
-              )
-          )
-          st.success("¡Alerta cargada con éxito en Turso Cloud!")
-          st.rerun()
-        except Exception as e:
-          st.error(f"Error al guardar alerta: {e}")
-
-  # ── TAB 3: BORRADO Y GESTIÓN DE REGISTROS ──
-  with tab_gestion:
-    st.subheader("Administración de Registros")
-    st.markdown(
-        "Eliminación manual de alertas de seguridad y movimientos sospechosos"
-        " obsoletos."
-    )
-
-    col_del_al, col_del_mov = st.columns(2)
-
-    # Depuración de Alertas
-    with col_del_al:
-      st.markdown('<div class="argos-card">', unsafe_allow_html=True)
-      st.markdown("<b>Borrar Alerta de Seguridad</b>", unsafe_allow_html=True)
-      try:
-        alertas_para_borrar = run_async(api.obtener_todas_las_alertas())
-      except Exception:
-        alertas_para_borrar = []
-
-      if alertas_para_borrar:
-        dict_del_al = {
-            f"ID {a['id']} — {a.get('incumplimiento', 'Alerta')}"
-            f" ({a.get('empleado', 'N/A')})": a["id"]
-            for a in alertas_para_borrar
-            if "id" in a
-        }
-        al_del_sel = st.selectbox(
-            "Seleccionar alerta a eliminar:",
-            list(dict_del_al.keys()),
-            key="sel_del_al",
-        )
-        id_al_borrar = dict_del_al[al_del_sel]
-
-        if st.button(
-            "🗑️ Eliminar Alerta", type="primary", key="btn_confirm_del_al"
-        ):
-          try:
-            if hasattr(api, "eliminar_alerta"):
-              run_async(api.eliminar_alerta(id_al_borrar))
-            elif hasattr(api, "borrar_alerta"):
-              run_async(api.borrar_alerta(id_al_borrar))
-            else:
-              st.error("No existe la función de borrado en SPs.py.")
-            st.success(f"Alerta ID {id_al_borrar} eliminada.")
-            st.rerun()
-          except Exception as e:
-            st.error(f"Error al eliminar la alerta: {e}")
-      else:
-        st.info("No hay alertas disponibles para borrar.")
-      st.markdown("</div>", unsafe_allow_html=True)
-
-    # Depuración de Movimientos Sospechosos
-    with col_del_mov:
-      st.markdown('<div class="argos-card">', unsafe_allow_html=True)
-      st.markdown(
-          "<b>Borrar Movimiento Sospechoso / Highlight</b>",
-          unsafe_allow_html=True,
-      )
-
-      movs_locales = (
-          api.listar_highlights_totales()
-          if hasattr(api, "listar_highlights_totales")
-          else []
-      )
-
-      if movs_locales:
-        dict_del_mov = {
-            f"{m.get('actividad', 'Movimiento')} — {m.get('empleado', 'N/A')}"
-            f" ({m.get('hora', '')})": m
-            for m in movs_locales
-        }
-        mov_del_sel = st.selectbox(
-            "Seleccionar movimiento:",
-            list(dict_del_mov.keys()),
-            key="sel_del_mov",
-        )
-        mov_obj = dict_del_mov[mov_del_sel]
-
-        if st.button(
-            "🗑️ Eliminar Movimiento", type="primary", key="btn_confirm_del_mov"
-        ):
-          try:
-            if hasattr(api, "eliminar_movimiento"):
-              run_async(
-                  api.eliminar_movimiento(mov_obj.get("id", mov_del_sel))
-              )
-            elif hasattr(api, "borrar_highlight"):
-              run_async(api.borrar_highlight(mov_obj.get("id", mov_del_sel)))
-            else:
-              st.info(
-                  "Registro descartado del panel (asegurate de implementar"
-                  " borrar_highlight en SPs.py para persistencia)."
-              )
-            st.success("Movimiento eliminado correctamente.")
-            st.rerun()
-          except Exception as e:
-            st.error(f"Error al eliminar el movimiento: {e}")
-      else:
-        st.info("No hay registros de movimientos sospechosos.")
-      st.markdown("</div>", unsafe_allow_html=True)
-
-# ============================================================
-# MÓDULO 5 — MI PERFIL
-# ============================================================
-elif menu == "👤 Mi Perfil":
-  module_header(
-      "👤", "Mi Perfil", "Información del operador y opciones de sesión."
-  )
-
-  _, col_p, _ = st.columns([1, 1.4, 1])
-  with col_p:
-    username = st.session_state.get("user_nombre", "Operador")
-
-    # Interpolación dinámica del nombre de usuario en la tarjeta
-    st.markdown(
-        f"""
-        <div class="profile-card">
-            <div class="profile-avatar">👤</div>
-            <h3 style="margin:0 0 .25rem;">{username}</h3>
-            <p style="color:var(--text-muted); font-size:.82rem; margin:0 0 1.25rem;">
-                Sesión activa
-            </p>
+        st.markdown(f"""
+        <div class="kpi-grid">
+            <div class="kpi-box"><div class="kpi-value">{metricas_data['activos']}</div><div class="kpi-label">Empleados activos en DB</div></div>
+            <div class="kpi-box"><div class="kpi-value">Turso</div><div class="kpi-label">Clúster AWS Activo</div></div>
+            <div class="kpi-box"><div class="kpi-value">{metricas_data['alertas']}</div><div class="kpi-label">Alertas totales en la nube</div></div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
+        
+        if metricas_data["filas"]:
+            st.markdown("#### Resumen analítico de la plantilla")
+            df_metricas = pd.DataFrame(metricas_data["filas"], columns=["Empleado", "Rendimiento asignado %", "Estado operativo"])
+            st.dataframe(df_metricas, use_container_width=True, hide_index=True)
+        else:
+            st.info("No se registran datos analíticos de personal en Turso Cloud.")
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    with tab_jornada:
+        col_emp_j, col_fecha_j = st.columns(2)
+        with col_emp_j:
+            emp_id_j = st.number_input("Consultar Jornada por ID de Empleado", step=1, value=1, key="id_jornada_val")
+        with col_fecha_j:
+            fecha_j = st.date_input("Fecha a validar", value=date.today(), key="fecha_jornada")
+            
+        if st.button("🔍 Consultar jornada laboral", type="primary"):
+            extras = asyncio.run(api.obtener_horas_extra_empleado(int(emp_id_j)))
+            if extras:
+                for ex in extras:
+                    st.markdown(f'<div class="argos-card"><b>Fichada de Control Detectada</b><br>Entrada: {ex["entrada"]} | Salida: {ex["salida"]}<br>Horas Extra Calculadas: <b>{ex["cantidad"]} hs</b> &nbsp; {badge("✔ Verificado por Sistema", "success")}</div>', unsafe_allow_html=True)
+            else:
+                st.info("Sin registros de horas o fichadas calculadas en Turso Cloud para este ID.")
 
-    def stat_row(label, value):
-      st.markdown(
-          f"""
-            <div class="stat-box">
-                <span class="stat-label">{label}</span>
-                <span class="stat-value">{value}</span>
-            </div>""",
-          unsafe_allow_html=True,
-      )
+    with tab_highlights:
+        st.info("Reproducciones automáticas de momentos destacados detectados por la IA en el local.")
+        videos = api.listar_highlights_totales()
+        if videos:
+            for v in videos:
+                with st.expander(f"🎬 {v['actividad'].upper()} — Empleado: {v['empleado']} ({v['fecha']} {v['hora']})"):
+                    col_hl, col_hr = st.columns()
+                    with col_hl: st.video(v["url_reproduccion"])
+                    with col_hr:
+                        st.markdown(f"**Archivo:** `{v['archivo']}`")
+                        st.markdown(badge("⭐ Destacado por IA", "info"), unsafe_allow_html=True)
+        else:
+            st.info("No se registran videos analíticos en la carpeta multimedia del local.")
 
-    stat_row("Usuario", username)
-    stat_row("Rol", "Administrador Global")
-    stat_row("Estación", "Terminal Local")
-    stat_row("Último acceso", datetime.now().strftime("%d/%m/%Y %H:%M"))
-    stat_row("Módulos activos", "5 / 5")
+elif menu == "🛡️ Seguridad":
+    module_header("🛡️", "Auditoría de Alertas", "Historial crítico de incumplimientos operacionales detectados por visión artificial.")
+    tab_seg, tab_inc = st.tabs(["🔒 Auditar eventos de seguridad", "⚠ Alertas de incumplimientos"])
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🚪 Cerrar sesión", width='stretch', type="primary"):
-      # Cierre de sesión controlado (mantiene colecciones como empleados o turnos intactas)
-      for key in ["user_nombre", "logged_in", "usuario_actual", "token"]:
-        st.session_state.pop(key, None)
-      st.rerun()
+    with tab_seg:
+        st.subheader("Historial de Incidencias en Tiempo Real")
+        alertas = asyncio.run(api.obtener_todas_las_alertas())
+        if alertas:
+            df_a = pd.DataFrame(alertas)
+            df_a.columns = ["ID", "Gravedad", "Incumplimiento / Alerta", "Fecha y Hora", "Empleado Involucrado"]
+            st.dataframe(df_a, use_container_width=True, hide_index=True)
+        else:
+            st.info("Sin alertas operacionales registradas en el clúster remoto.")
 
-# ============================================================
-# BOTONES DE NAVEGACIÓN REALES — al final del DOM, ocultos
-# Streamlit los renderiza aquí abajo; CSS los hace invisibles
-# pero el JS del footer los puede clickear
-# ============================================================
-st.markdown("""
-<style>
-/* Oculta el último bloque horizontal que contiene los botones de nav */
-div[data-testid="stMainBlockContainer"] > div > div[data-testid="stVerticalBlock"]
-  > div:last-child > div[data-testid="stHorizontalBlock"] {
-    opacity: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    pointer-events: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
+    with tab_inc:
+        st.subheader("Registro de Alertas Manuales")
+        with st.expander("➕ Registrar nuevo incumplimiento manualmente"):
+            nueva_desc = st.text_input("Descripción del incumplimiento (ej: Abandono de puesto)")
+            emp_id_al = st.number_input("ID Empleado asociado", step=1, value=1, key="emp_id_alerta_man")
+            nueva_grav = st.selectbox("Gravedad de la Alerta", ["Alta", "Media", "Baja"], key="ng_manual")
+            
+            if st.button("Guardar alerta manual", type="primary"):
+                if nueva_desc:
+                    asyncio.run(api.guardar_alerta(nueva_grav, nueva_desc, emp_id_al))
+                    st.success("Alerta registrada y guardada de forma remota en Turso Cloud.")
+                    st.rerun()
+                else:
+                    st.warning("Ingresá una descripción.")
 
-# Encapsulamos en un contenedor seguro para blindar el aislamiento estructural del CSS
-with st.container(key="contenedor_navegacion_oculta"):
+elif menu == "👤 Mi Perfil":
+    module_header("👤", "Mi Perfil", "Información del operador y opciones de sesión.")
+    _, col_p, _ = st.columns([1, 1.4, 1])
+    with col_p:
+        username = st.session_state.get("user_nombre", "Operador")
+        st.markdown(f'<div class="profile-card"><div class="profile-avatar">👤</div><h3 style="margin:0 0 .25rem;">{username}</h3><p style="color:var(--text-muted); font-size:.82rem; margin:0 0 1.25rem;">Sesión activa en Turso Cloud</p></div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        def stat_row(label, value):
+            st.markdown(f'<div class="stat-box"><span class="stat-label">{label}</span><span class="stat-value">{value}</span></div>', unsafe_allow_html=True)
+        
+        stat_row("Usuario ID", str(st.session_state.get("user_id", "N/A")))
+        stat_row("Nombre", username)
+        stat_row("Estación", "Terminal Local Cifrada")
+        stat_row("Último acceso", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        stat_row("Módulos activos", "5 / 5")
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("🚪 Cerrar sesión", use_container_width=True, type="primary"):
+            st.session_state.autenticado = False
+            st.rerun()
+
+st.markdown("""<style>div[data-testid="stMainBlockContainer"] > div > div[data-testid="stVerticalBlock"] > div:last-child > div[data-testid="stHorizontalBlock"] { opacity: 0 !important; height: 0 !important; overflow: hidden !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; }</style>""", unsafe_allow_html=True)
+
+with st.container():
     _nav_cols = st.columns(len(MENU_ITEMS))
     for _i, (_icon, _label) in enumerate(MENU_ITEMS):
         _full = f"{_icon} {_label}"
         with _nav_cols[_i]:
-            if st.button(
-                _full,
-                key=f"nav_{_label}",
-                width='stretch',  # <-- Reemplazause_container_width por esto
-                type="primary" if menu == _full else "secondary",
-            ):
+            if st.button(_full, key=f"nav_{_label}", use_container_width=True, type="primary" if menu == _full else "secondary"):
                 st.session_state.menu_actual = _full
                 st.rerun()

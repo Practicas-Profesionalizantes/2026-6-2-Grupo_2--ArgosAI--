@@ -36,21 +36,17 @@ if not TURSO_URL_RAW or not TURSO_TOKEN:
 
 # 🟢 SANEAMIENTO MATEMÁTICO AUTOMÁTICO DE URL
 # Remueve de forma transparente cualquier prefijo redundante para evitar el recorte del subdominio de AWS
-# 🟢 SANEAMIENTO DE URL: Mantener el protocolo nativo libsql://
-HOST_LIMPIO = (
-    TURSO_URL_RAW.replace("libsql://", "")
-    .replace("https://", "")
-    .replace("http://", "")
-    .strip()
-)
-TURSO_URL = f"libsql://{HOST_LIMPIO}"
+HOST_LIMPIO = TURSO_URL_RAW.replace("libsql://", "").replace("https://", "").replace("http://", "").strip()
+TURSO_URL = f"https://{HOST_LIMPIO}"
 
 def obtener_cliente_turso():
-  """Retorna el cliente oficial de Turso Cloud."""
-  try:
-    return libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
-  except Exception as e_init:
-    logging.error(
-        f"Fallo crítico al instanciar el cliente de Turso Cloud: {e_init}"
-    )
-    raise e_init
+    """
+    Retorna el cliente HTTP oficial seguro e independiente de Turso Cloud.
+    Aplica el Pilar de Manejo de Errores capturando fallas de inicialización.
+    """
+    # 🟢 PILAR MANEJO DE ERRORES: Control estricto de instanciación
+    try:
+        return libsql_client.create_client(url=TURSO_URL, auth_token=TURSO_TOKEN)
+    except Exception as e_init:
+        logging.error(f"Fallo crítico al instanciar el cliente HTTP de Turso Cloud: {e_init}")
+        raise e_init
