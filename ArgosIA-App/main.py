@@ -24,6 +24,40 @@ def _resource_root() -> Path:
     return Path(__file__).resolve().parent
 
 
+def _startup_log_path() -> Path:
+    try:
+        app_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "ArgosIA"
+        app_dir.mkdir(parents=True, exist_ok=True)
+        return app_dir / "launch.log"
+    except Exception:
+        return _resource_root() / "argos_launch.log"
+
+
+def _log_startup(message: str) -> None:
+    try:
+        path = _startup_log_path()
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with path.open("a", encoding="utf-8") as log_file:
+            log_file.write(f"[{timestamp}] {message}\n")
+    except Exception:
+        pass
+
+
+def _show_startup_dialog(message: str) -> None:
+    try:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+
+        app = QApplication.instance() or QApplication(sys.argv[:1])
+        QMessageBox.critical(None, "ArgosIA no pudo iniciar", message)
+    except Exception:
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(None, message, "ArgosIA no pudo iniciar", 0x10)
+        except Exception:
+            print(f"ArgosIA no pudo iniciar: {message}", file=sys.stderr)
+
+
 def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -142,6 +176,7 @@ def _stop_process(process: subprocess.Popen | None) -> None:
 
 
 def iniciar_app_escritorio() -> int:
+    _log_startup("Iniciando ArgosIA")
     root = _resource_root()
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -229,17 +264,6 @@ if __name__ == "__main__":
             if isinstance(exc, (AppStartupError, FileNotFoundError, TimeoutError))
             else "Ocurrió un error al iniciar los componentes locales. Revisá la instalación y volvé a intentar."
         )
-        try:
-            from PySide6.QtWidgets import QApplication, QMessageBox
-
-            app = QApplication.instance() or QApplication(sys.argv[:1])
-            QMessageBox.critical(None, "ArgosIA no pudo iniciar", message)
-        except Exception:
-            # Permite informar fallos de instalación de Qt/PySide6 sin una segunda traza.
-            try:
-                import ctypes
-
-                ctypes.windll.user32.MessageBoxW(None, message, "ArgosIA no pudo iniciar", 0x10)
-            except Exception:
-                print(f"ArgosIA no pudo iniciar: {message}", file=sys.stderr)
+        _log_startup(f"Error de arranque: {message}")
+        _show_startup_dialog(message)
         raise SystemExit(1) from None
