@@ -50,7 +50,7 @@ Martin Lopez Schillaci.
 
 Rosendo Osores.
 
-Martin Romero Kaki.
+Martin Romero Krawczyk.
 
 Gaston Amaya.
 
